@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emo RPG Prototype</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Emo RPG</h1>
+      <p>Dark fantasy co-op RPG prototype</p>
+    </header>
+
+    <nav class="tabs">
+      <button data-screen="home" class="active">Home</button>
+      <button data-screen="character">Character</button>
+      <button data-screen="inventory">Inventory</button>
+      <button data-screen="housing">Housing</button>
+      <button data-screen="dungeon">Dungeon</button>
+    </nav>
+
+    <main>
+      <section id="home" class="screen active">
+        <h2>Game Pillars</h2>
+        <ul>
+          <li>D&D-style classes and progression</li>
+          <li>4–6 player dungeons</li>
+          <li>Housing and customization</li>
+          <li>Harvesting, mounts, pets, taming</li>
+        </ul>
+      </section>
+
+      <section id="character" class="screen">
+        <h2>Create Character</h2>
+        <label>Class</label>
+        <select id="classSelect">
+          <option>Fighter</option>
+          <option>Rogue</option>
+          <option>Wizard</option>
+          <option>Cleric</option>
+          <option>Ranger</option>
+          <option>Warlock</option>
+        </select>
+
+        <label>Origin</label>
+        <select id="originSelect">
+          <option>Fallen Noble</option>
+          <option>Witch-Touched</option>
+          <option>Exiled Hunter</option>
+          <option>Temple Orphan</option>
+        </select>
+
+        <p id="characterSummary"></p>
+      </section>
+
+      <section id="inventory" class="screen">
+        <h2>Inventory</h2>
+        <div class="grid">
+          <div class="slot">Sword</div>
+          <div class="slot">Torch</div>
+          <div class="slot">Potion</div>
+          <div class="slot">Leather Hood</div>
+          <div class="slot empty"></div>
+          <div class="slot empty"></div>
+        </div>
+      </section>
+
+      <section id="housing" class="screen">
+        <h2>Housing / Build Menu</h2>
+        <div class="grid">
+          <div class="slot">Wall</div>
+          <div class="slot">Door</div>
+          <div class="slot">Torch Sconce</div>
+          <div class="slot">Chest</div>
+          <div class="slot">Bed</div>
+          <div class="slot">Forge</div>
+        </div>
+      </section>
+
+      <section id="dungeon" class="screen">
+        <h2>Dungeon Preview</h2>
+        <p>Party Size: 4–6</p>
+        <p>Theme: cathedral ruins, moonlit fog, cursed knights</p>
+        <button id="encounterBtn">Generate Encounter</button>
+        <p id="encounterText"></p>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
