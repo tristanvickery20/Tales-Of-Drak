@@ -1,0 +1,48 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "enemy",
+  "records": [
+    {
+      "id": "barrow_rat",
+      "name": "Barrow Rat",
+      "role": "melee",
+      "level": 1,
+      "tag_ids": [
+        "beast",
+        "dungeon",
+        "pack"
+      ],
+      "drop_item_ids": [
+        "torch_kit"
+      ]
+    },
+    {
+      "id": "ashen_revenant",
+      "name": "Ashen Revenant",
+      "role": "elite",
+      "level": 3,
+      "tag_ids": [
+        "undead",
+        "ruin",
+        "slow"
+      ],
+      "drop_item_ids": [
+        "iron_ore"
+      ]
+    },
+    {
+      "id": "crypt_watcher",
+      "name": "Crypt Watcher",
+      "role": "boss",
+      "level": 5,
+      "tag_ids": [
+        "undead",
+        "boss",
+        "dungeon"
+      ],
+      "drop_item_ids": [
+        "torch_kit"
+      ]
+    }
+  ]
+}

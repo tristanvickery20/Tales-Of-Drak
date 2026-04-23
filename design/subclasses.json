@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "subclass",
+  "records": [
+    {
+      "id": "ashen_guard",
+      "class_id": "warden",
+      "name": "Ashen Guard",
+      "theme": "shield_ruin_sentinel",
+      "bonus_stat_ids": [
+        "vitality",
+        "resolve"
+      ],
+      "starter_ability_bonuses": {
+        "constitution": 1
+      }
+    },
+    {
+      "id": "night_prowler",
+      "class_id": "veilstrider",
+      "name": "Night Prowler",
+      "theme": "ambush_mobility",
+      "bonus_stat_ids": [
+        "dexterity",
+        "luck"
+      ],
+      "starter_ability_bonuses": {
+        "dexterity": 1
+      }
+    },
+    {
+      "id": "bone_scholar",
+      "class_id": "gravebound",
+      "name": "Bone Scholar",
+      "theme": "forbidden_rituals",
+      "bonus_stat_ids": [
+        "intellect",
+        "willpower"
+      ],
+      "starter_ability_bonuses": {
+        "intelligence": 1
+      }
+    }
+  ]
+}

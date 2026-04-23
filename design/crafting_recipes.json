@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "crafting_recipe",
+  "records": [
+    {
+      "id": "craft_torch_kit",
+      "input_item_counts": {
+        "weathered_timber": 1
+      },
+      "output_item_counts": {
+        "torch_kit": 2
+      },
+      "recipe_id": "craft_torch_kit",
+      "display_name": "Craft Torch Kit",
+      "required_station_id": "campfire",
+      "crafting_seconds": 3
+    },
+    {
+      "id": "smelt_iron_ore",
+      "input_item_counts": {
+        "iron_ore": 3
+      },
+      "output_item_counts": {
+        "iron_ingot": 1
+      },
+      "recipe_id": "smelt_iron_ore",
+      "display_name": "Smelt Iron Ore",
+      "required_station_id": "forge",
+      "crafting_seconds": 3
+    }
+  ]
+}

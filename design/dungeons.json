@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "dungeon",
+  "records": [
+    {
+      "id": "weeping_crypt",
+      "name": "Weeping Crypt",
+      "recommended_party_size": "1-4",
+      "recommended_level_range": "1-5",
+      "theme": "collapsed_burial_halls",
+      "enemy_ids": [
+        "barrow_rat",
+        "ashen_revenant",
+        "crypt_watcher"
+      ]
+    }
+  ]
+}

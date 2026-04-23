@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "weapon",
+  "records": [
+    {
+      "id": "rusted_longsword",
+      "name": "Rusted Longsword",
+      "weapon_tag_id": "sword",
+      "slot": "main_hand",
+      "damage_type": "physical",
+      "hands": "one_handed",
+      "stat_scaling": {
+        "strength": 1.0
+      },
+      "base_item_id": "rusted_longsword",
+      "equipment_bonuses": {
+        "armor_class_bonus": 0,
+        "max_health_bonus": 0,
+        "movement_speed_bonus": 0,
+        "ability_bonuses": {
+          "strength": 1
+        }
+      }
+    },
+    {
+      "id": "hunter_bow",
+      "name": "Hunter Bow",
+      "weapon_tag_id": "bow",
+      "slot": "two_hand",
+      "damage_type": "physical",
+      "hands": "two_handed",
+      "stat_scaling": {
+        "dexterity": 1.0
+      },
+      "base_item_id": "hunter_bow",
+      "equipment_bonuses": {
+        "armor_class_bonus": 0,
+        "max_health_bonus": 0,
+        "movement_speed_bonus": 0,
+        "ability_bonuses": {
+          "dexterity": 1
+        }
+      }
+    },
+    {
+      "id": "gravewood_staff",
+      "name": "Gravewood Staff",
+      "weapon_tag_id": "staff",
+      "slot": "two_hand",
+      "damage_type": "occult",
+      "hands": "two_handed",
+      "stat_scaling": {
+        "intellect": 1.0
+      },
+      "base_item_id": "gravewood_staff",
+      "equipment_bonuses": {
+        "armor_class_bonus": 0,
+        "max_health_bonus": 1,
+        "movement_speed_bonus": 0,
+        "ability_bonuses": {
+          "intelligence": 1
+        }
+      }
+    }
+  ]
+}

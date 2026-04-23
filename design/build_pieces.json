@@ -1,0 +1,108 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "build_piece",
+  "records": [
+    {
+      "id": "timber_foundation",
+      "display_name": "Timber Foundation",
+      "category": "foundation",
+      "placement_type": "ground_snap",
+      "required_item_counts": {
+        "weathered_timber": 8
+      },
+      "max_health": 200,
+      "tags": [
+        "starter",
+        "timber"
+      ]
+    },
+    {
+      "id": "timber_wall",
+      "display_name": "Timber Wall",
+      "category": "wall",
+      "placement_type": "vertical_snap",
+      "required_item_counts": {
+        "weathered_timber": 5
+      },
+      "max_health": 150,
+      "tags": [
+        "starter",
+        "timber"
+      ]
+    },
+    {
+      "id": "timber_doorframe",
+      "display_name": "Timber Doorframe",
+      "category": "structure",
+      "placement_type": "vertical_snap",
+      "required_item_counts": {
+        "weathered_timber": 6
+      },
+      "max_health": 140,
+      "tags": [
+        "starter",
+        "timber",
+        "entry"
+      ]
+    },
+    {
+      "id": "timber_roof",
+      "display_name": "Timber Roof",
+      "category": "roof",
+      "placement_type": "roof_snap",
+      "required_item_counts": {
+        "weathered_timber": 7
+      },
+      "max_health": 130,
+      "tags": [
+        "starter",
+        "timber"
+      ]
+    },
+    {
+      "id": "torch_sconce",
+      "display_name": "Torch Sconce",
+      "category": "utility",
+      "placement_type": "wall_snap",
+      "required_item_counts": {
+        "weathered_timber": 2,
+        "torch_kit": 1
+      },
+      "max_health": 60,
+      "tags": [
+        "light",
+        "starter"
+      ]
+    },
+    {
+      "id": "storage_chest",
+      "display_name": "Storage Chest",
+      "category": "furniture",
+      "placement_type": "ground_place",
+      "required_item_counts": {
+        "weathered_timber": 10,
+        "iron_ingot": 2
+      },
+      "max_health": 120,
+      "tags": [
+        "storage",
+        "starter"
+      ]
+    },
+    {
+      "id": "simple_bed",
+      "display_name": "Simple Bed",
+      "category": "comfort",
+      "placement_type": "ground_place",
+      "required_item_counts": {
+        "weathered_timber": 6,
+        "torch_kit": 1
+      },
+      "max_health": 90,
+      "tags": [
+        "respawn",
+        "starter"
+      ]
+    }
+  ]
+}

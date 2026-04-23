@@ -1,0 +1,10 @@
+; Engine configuration file.
+; This project file is intentionally minimal.
+; The Godot project is nested under /godot so docs and design data can live at repo root.
+
+config_version=5
+
+[application]
+
+config/name="Tales of Drak"
+config/description="Framework Prototype v0.1 for a dark fantasy co-op RPG foundation."

@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "pet",
+  "records": [
+    {
+      "id": "cinder_hound_pup",
+      "name": "Cinder Hound Pup",
+      "pet_role": "combat_placeholder",
+      "bond_theme": "loyal_ember_beast"
+    },
+    {
+      "id": "mire_owl",
+      "name": "Mire Owl",
+      "pet_role": "utility",
+      "bond_theme": "watchful_swamp_bird"
+    }
+  ]
+}

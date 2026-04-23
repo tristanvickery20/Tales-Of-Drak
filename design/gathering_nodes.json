@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "gathering_node",
+  "records": [
+    {
+      "id": "iron_vein_small",
+      "display_name": "Small Iron Vein",
+      "required_tool_item_id": "starter_hatchet",
+      "output_item_id": "iron_ore",
+      "output_quantity_min": 1,
+      "output_quantity_max": 3,
+      "respawn_seconds": 180
+    },
+    {
+      "id": "weathered_tree_deadfall",
+      "display_name": "Weathered Deadfall",
+      "required_tool_item_id": "starter_hatchet",
+      "output_item_id": "weathered_timber",
+      "output_quantity_min": 2,
+      "output_quantity_max": 4,
+      "respawn_seconds": 240
+    },
+    {
+      "id": "sunleaf_patch",
+      "display_name": "Sunleaf Patch",
+      "required_tool_item_id": "",
+      "output_item_id": "sunleaf_herb",
+      "output_quantity_min": 1,
+      "output_quantity_max": 2,
+      "respawn_seconds": 150
+    }
+  ]
+}

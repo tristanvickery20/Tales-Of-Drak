@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "mount",
+  "records": [
+    {
+      "id": "ash_mare",
+      "name": "Ash Mare",
+      "movement_profile": "ground_fast",
+      "temperament": "steady"
+    },
+    {
+      "id": "bog_strider",
+      "name": "Bog Strider",
+      "movement_profile": "ground_medium",
+      "temperament": "stubborn"
+    }
+  ]
+}

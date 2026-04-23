@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "quest",
+  "records": [
+    {
+      "id": "enter_weeping_crypt",
+      "name": "Enter the Weeping Crypt",
+      "quest_type": "dungeon_intro",
+      "objective_ids": [
+        "travel_to_weeping_crypt",
+        "enter_dungeon_shell"
+      ],
+      "reward_item_ids": [
+        "torch_kit"
+      ]
+    }
+  ]
+}

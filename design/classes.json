@@ -1,0 +1,61 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "class",
+  "records": [
+    {
+      "id": "warden",
+      "name": "Warden",
+      "role": "frontline_defender",
+      "primary_stat_ids": [
+        "vitality",
+        "strength"
+      ],
+      "resource_type": "stamina",
+      "starting_weapon_tag_ids": [
+        "sword",
+        "shield",
+        "axe"
+      ],
+      "starter_ability_bonuses": {
+        "strength": 1,
+        "constitution": 1
+      }
+    },
+    {
+      "id": "veilstrider",
+      "name": "Veilstrider",
+      "role": "mobile_skirmisher",
+      "primary_stat_ids": [
+        "dexterity",
+        "willpower"
+      ],
+      "resource_type": "focus",
+      "starting_weapon_tag_ids": [
+        "dagger",
+        "bow"
+      ],
+      "starter_ability_bonuses": {
+        "dexterity": 1,
+        "wisdom": 1
+      }
+    },
+    {
+      "id": "gravebound",
+      "name": "Gravebound",
+      "role": "occult_caster",
+      "primary_stat_ids": [
+        "intellect",
+        "willpower"
+      ],
+      "resource_type": "essence",
+      "starting_weapon_tag_ids": [
+        "staff",
+        "tome"
+      ],
+      "starter_ability_bonuses": {
+        "intelligence": 1,
+        "charisma": 1
+      }
+    }
+  ]
+}

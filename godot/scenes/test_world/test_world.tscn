@@ -1,0 +1,102 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/test_world_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://scripts/player/third_person_controller.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(30, 30)
+
+[sub_resource type="BoxShape3D" id="BoxShape_ground"]
+size = Vector3(30, 1, 30)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ruin"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.45
+height = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_gather"]
+size = Vector3(0.8, 1.2, 0.8)
+
+[node name="TestWorld" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.5, 0, 0.353553, 0.612373, -0.707107, 0.353553, 0.612372, 0.707107, 0, 8, 0)
+light_energy = 1.3
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="GroundCollision" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("BoxShape_ground")
+
+[node name="Ruins" type="Node3D" parent="."]
+
+[node name="RuinBlockA" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, -4)
+mesh = SubResource("BoxMesh_ruin")
+
+[node name="RuinBlockB" type="MeshInstance3D" parent="Ruins"]
+transform = Transform3D(0.8, 0, 0, 0, 0.6, 0, 0, 0, 0.8, 7, 0.6, -5)
+mesh = SubResource("BoxMesh_ruin")
+
+[node name="GatherNode" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.6, 2)
+
+[node name="GatherVisual" type="MeshInstance3D" parent="GatherNode"]
+mesh = SubResource("BoxMesh_gather")
+
+[node name="BuildSpawnMarker" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.2, 3)
+
+[node name="PlacedBuildPieces" type="Node3D" parent="."]
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("2_player")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Player"]
+mesh = SubResource("CapsuleMesh_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+shape = SubResource("CapsuleShape_player")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 1.5, 0)
+spring_length = 6.0
+
+[node name="Camera3D" type="Camera3D" parent="Player/SpringArm3D"]
+current = true
+
+[node name="DebugHud" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="DebugHud"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DebugHud/MarginContainer"]
+
+[node name="TitleLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Character: (loading)"
+
+[node name="InventoryLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Inventory:"
+
+[node name="PromptLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Prompt:"
+
+[node name="ResultLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Last:"

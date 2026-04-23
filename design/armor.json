@@ -1,0 +1,72 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "armor",
+  "records": [
+    {
+      "id": "tarnished_cuirass",
+      "name": "Tarnished Cuirass",
+      "slot": "chest",
+      "armor_class": "heavy",
+      "stat_bonuses": {
+        "vitality": 2
+      },
+      "tag_ids": [
+        "starter",
+        "warden"
+      ],
+      "base_item_id": "tarnished_cuirass",
+      "equipment_bonuses": {
+        "armor_class_bonus": 2,
+        "max_health_bonus": 2,
+        "movement_speed_bonus": -1,
+        "ability_bonuses": {
+          "constitution": 1
+        }
+      }
+    },
+    {
+      "id": "shadowwrap_hood",
+      "name": "Shadowwrap Hood",
+      "slot": "head",
+      "armor_class": "light",
+      "stat_bonuses": {
+        "dexterity": 1
+      },
+      "tag_ids": [
+        "veilstrider",
+        "starter"
+      ],
+      "base_item_id": "shadowwrap_hood",
+      "equipment_bonuses": {
+        "armor_class_bonus": 1,
+        "max_health_bonus": 0,
+        "movement_speed_bonus": 0,
+        "ability_bonuses": {
+          "dexterity": 1
+        }
+      }
+    },
+    {
+      "id": "gravebone_charm",
+      "name": "Gravebone Charm",
+      "slot": "amulet",
+      "armor_class": "accessory",
+      "stat_bonuses": {
+        "willpower": 1
+      },
+      "tag_ids": [
+        "gravebound",
+        "occult"
+      ],
+      "base_item_id": "gravebone_charm",
+      "equipment_bonuses": {
+        "armor_class_bonus": 0,
+        "max_health_bonus": 1,
+        "movement_speed_bonus": 0,
+        "ability_bonuses": {
+          "wisdom": 1
+        }
+      }
+    }
+  ]
+}
