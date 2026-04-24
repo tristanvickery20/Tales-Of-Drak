@@ -37,6 +37,19 @@ var selected_recipe_index = 0
 var backpack_lines = PackedStringArray()
 var character_lines = PackedStringArray()
 var inventory_counts = {}
+
+var item_defs = {
+	"starter_hatchet":{"name":"Starter Hatchet","icon":"H","type":"tool","slot":"main_hand","description":"A rough starter hatchet. Useful for gathering and basic fighting.","usable":false,"equippable":true},
+	"weathered_timber":{"name":"Weathered Timber","icon":"W","type":"resource","slot":"","description":"Old timber gathered from the world. Used for primitive crafting.","usable":false,"equippable":false},
+	"torch_kit":{"name":"Torch Kit","icon":"T","type":"utility","slot":"","description":"A simple torch kit for light and survival crafting chains.","usable":false,"equippable":false},
+	"timber_foundation":{"name":"Timber Foundation","icon":"F","type":"building","slot":"","description":"A primitive building foundation for the future housing/building system.","usable":false,"equippable":false},
+	"starter_bandage":{"name":"Simple Bandage","icon":"+","type":"consumable","slot":"","description":"A crude bandage. Restores a small amount of HP.","usable":true,"equippable":false},
+	"camp_marker":{"name":"Camp Marker","icon":"C","type":"utility","slot":"","description":"A placeholder camp object for future housing and rest systems.","usable":false,"equippable":false},
+	"rusty_sword":{"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","usable":false,"equippable":true},
+	"plain_clothes":{"name":"Plain Clothes","icon":"A","type":"armor","slot":"armor","description":"Basic starter clothing. No real protection yet.","usable":false,"equippable":true},
+	"ancient_coin":{"name":"Ancient Coin","icon":"O","type":"currency","slot":"","description":"A small coin from the dungeon. Used later for vendors and markets.","usable":false,"equippable":false}
+}
+
 var recipes = [
 	{"id":"craft_torch_kit","icon":"T","name":"Torch Kit","category":"Survival / Primitive","description":"A basic torch kit for dark places.","requirements":{"weathered_timber":1},"output_item_id":"torch_kit","output_quantity":2},
 	{"id":"timber_foundation","icon":"F","name":"Timber Foundation","category":"Building / Primitive","description":"A rough timber floor piece.","requirements":{"weathered_timber":8},"output_item_id":"timber_foundation","output_quantity":1},
@@ -78,7 +91,7 @@ func _build_bars():
 	hp_frame.offset_top = 10
 	hp_frame.offset_right = 242
 	hp_frame.offset_bottom = 42
-	hp_frame.add_theme_stylebox_override("panel", _panel_style(Color(0.04,0,0,0.95), Color(0.7,0.1,0.08,1), 6))	
+	hp_frame.add_theme_stylebox_override("panel", _panel_style(Color(0.04,0,0,0.95), Color(0.7,0.1,0.08,1), 6))
 	add_child(hp_frame)
 	var hp_inner = Control.new()
 	hp_inner.custom_minimum_size = Vector2(230, 32)
@@ -252,24 +265,17 @@ func _toggle_inventory():
 func set_player_health(current_hp, max_hp):
 	var safe_max = max(1, int(max_hp))
 	var safe_current = clamp(int(current_hp), 0, safe_max)
-	if hp_fill != null:
-		hp_fill.size.x = 222.0 * float(safe_current) / float(safe_max)
-	if hp_text != null:
-		hp_text.text = "%d / %d HP" % [safe_current, safe_max]
+	if hp_fill != null: hp_fill.size.x = 222.0 * float(safe_current) / float(safe_max)
+	if hp_text != null: hp_text.text = "%d / %d HP" % [safe_current, safe_max]
 
 func set_progression(level, xp, xp_to_next):
 	var safe_next = max(1, int(xp_to_next))
 	var safe_xp = clamp(int(xp), 0, safe_next)
-	if xp_fill != null:
-		xp_fill.size.x = 224.0 * float(safe_xp) / float(safe_next)
-	if xp_text != null:
-		xp_text.text = "LV %d  XP %d/%d" % [int(level), safe_xp, safe_next]
+	if xp_fill != null: xp_fill.size.x = 224.0 * float(safe_xp) / float(safe_next)
+	if xp_text != null: xp_text.text = "LV %d  XP %d/%d" % [int(level), safe_xp, safe_next]
 
-func set_character_summary(display_name, class_id):
-	title_label.text = "Character: %s (%s)" % [str(display_name), str(class_id)]
-
-func set_inventory_summary(lines):
-	set_inventory_tabs(lines, PackedStringArray(), character_lines)
+func set_character_summary(display_name, class_id): title_label.text = "Character: %s (%s)" % [str(display_name), str(class_id)]
+func set_inventory_summary(lines): set_inventory_tabs(lines, PackedStringArray(), character_lines)
 
 func set_inventory_tabs(backpack, _crafting, character):
 	backpack_lines = backpack
@@ -312,9 +318,10 @@ func _show_backpack():
 		if i < backpack_lines.size():
 			var p = _parse_line(backpack_lines[i])
 			var id = str(p.get("item_id", ""))
-			slot.text = "%s\n%d" % [GameState.get_item_icon(id), int(p.get("quantity", 0))]
+			slot.text = "%s\n%d" % [_item_icon(id), int(p.get("quantity", 0))]
 			slot.pressed.connect(func(idx=i): selected_item_index = idx; _update_view())
-		else: slot.disabled = true
+		else:
+			slot.disabled = true
 		grid.add_child(slot)
 	_update_action_buttons()
 
@@ -329,7 +336,8 @@ func _show_crafting():
 			var r = recipes[i]
 			slot.text = str(r.get("icon", "?"))
 			slot.pressed.connect(func(idx=i): selected_recipe_index = idx; _update_view())
-		else: slot.disabled = true
+		else:
+			slot.disabled = true
 		grid.add_child(slot)
 	_update_action_buttons()
 
@@ -348,14 +356,14 @@ func _show_character():
 func _item_details():
 	if backpack_lines.is_empty(): return "BACKPACK\n\nNo items."
 	var id = str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", ""))
-	var d = GameState.get_item_definition(id)
+	var d = _item_def(id)
 	return "ITEM: %s\nType: %s\nQty: %d\n\n%s" % [str(d.get("name", id)).to_upper(), str(d.get("type", "unknown")), int(inventory_counts.get(id, 0)), str(d.get("description", "No description."))]
 
 func _recipe_details():
 	var r = recipes[clamp(selected_recipe_index, 0, recipes.size() - 1)]
 	var text = "ENGRAM: %s / %s\n\n%s\n\nCrafting Requirements\n" % [str(r.get("name", "Recipe")).to_upper(), str(r.get("category", "Primitive")), str(r.get("description", ""))]
 	for id in r.get("requirements", {}).keys():
-		text += "%s: %d / %d\n" % [GameState.get_item_name(str(id)), int(inventory_counts.get(str(id), 0)), int(r["requirements"][id])]
+		text += "%s: %d / %d\n" % [_item_name(str(id)), int(inventory_counts.get(str(id), 0)), int(r["requirements"][id])]
 	return text
 
 func _recipe_craftable(r):
@@ -373,7 +381,7 @@ func _update_action_buttons():
 		primary_button.text = "CRAFT" if _recipe_craftable(r) else "MISSING MATERIALS"
 	elif active_tab == "backpack" and not backpack_lines.is_empty():
 		var id = str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", ""))
-		var d = GameState.get_item_definition(id)
+		var d = _item_def(id)
 		primary_button.visible = bool(d.get("usable", false))
 		primary_button.text = "USE"
 		secondary_button.visible = bool(d.get("equippable", false))
@@ -385,3 +393,11 @@ func _primary_action():
 
 func _secondary_action():
 	if active_tab == "backpack" and not backpack_lines.is_empty(): equip_item_requested.emit(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
+
+func _item_def(item_id):
+	item_id = str(item_id)
+	if item_defs.has(item_id): return item_defs[item_id]
+	return {"name":item_id.replace("_", " ").capitalize(), "icon":"?", "type":"unknown", "description":"No item details yet.", "usable":false, "equippable":false}
+
+func _item_name(item_id): return str(_item_def(item_id).get("name", item_id))
+func _item_icon(item_id): return str(_item_def(item_id).get("icon", "?"))
