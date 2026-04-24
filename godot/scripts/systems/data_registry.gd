@@ -90,16 +90,17 @@ func get_loaded_files() -> PackedStringArray:
 
 
 func _resolve_design_path() -> String:
-	# Prefer bundled export data first. The GitHub Actions preview workflow copies
-	# repo-root /design into godot/design before exporting the Web build.
-	if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(DESIGN_DIR_EXPORT)):
+	# Prefer bundled export data first. In Web export, res:// is a virtual
+	# package path, so do NOT check it through ProjectSettings.globalize_path().
+	if DirAccess.open(DESIGN_DIR_EXPORT) != null:
 		return DESIGN_DIR_EXPORT
 
 	# Fallback for local repo development where the canonical data lives outside
-	# the nested /godot project folder.
+	# the nested /godot project folder. This path is only expected to work in a
+	# normal local filesystem, not inside a Web export.
 	var local_path := ProjectSettings.globalize_path(DESIGN_DIR_LOCAL)
 	if DirAccess.dir_exists_absolute(local_path):
-		return local_path
+		return DESIGN_DIR_LOCAL
 
 	return ""
 
