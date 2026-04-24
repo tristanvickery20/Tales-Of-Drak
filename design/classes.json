@@ -3,12 +3,12 @@
   "record_type": "class",
   "records": [
     {
-      "id": "warden",
-      "name": "Warden",
-      "role": "frontline_defender",
+      "id": "fighter",
+      "name": "Fighter",
+      "role": "martial_frontliner",
       "primary_stat_ids": [
-        "vitality",
-        "strength"
+        "strength",
+        "constitution"
       ],
       "resource_type": "stamina",
       "starting_weapon_tag_ids": [
@@ -22,39 +22,39 @@
       }
     },
     {
-      "id": "veilstrider",
-      "name": "Veilstrider",
-      "role": "mobile_skirmisher",
+      "id": "warlock",
+      "name": "Warlock",
+      "role": "pact_caster",
       "primary_stat_ids": [
-        "dexterity",
-        "willpower"
+        "charisma",
+        "constitution"
       ],
-      "resource_type": "focus",
+      "resource_type": "pact_magic",
       "starting_weapon_tag_ids": [
         "dagger",
-        "bow"
+        "tome"
       ],
       "starter_ability_bonuses": {
-        "dexterity": 1,
-        "wisdom": 1
+        "charisma": 1,
+        "constitution": 1
       }
     },
     {
-      "id": "gravebound",
-      "name": "Gravebound",
-      "role": "occult_caster",
+      "id": "wizard",
+      "name": "Wizard",
+      "role": "arcane_caster",
       "primary_stat_ids": [
-        "intellect",
-        "willpower"
+        "intelligence",
+        "wisdom"
       ],
-      "resource_type": "essence",
+      "resource_type": "spell_slots",
       "starting_weapon_tag_ids": [
         "staff",
         "tome"
       ],
       "starter_ability_bonuses": {
         "intelligence": 1,
-        "charisma": 1
+        "wisdom": 1
       }
     }
   ]
