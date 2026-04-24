@@ -1,0 +1,160 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "item",
+  "records": [
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "item_type": "material",
+      "stack_size": 99,
+      "rarity": "common",
+      "value": 3,
+      "tag_ids": [
+        "ore",
+        "gathered",
+        "smithing"
+      ]
+    },
+    {
+      "id": "weathered_timber",
+      "name": "Weathered Timber",
+      "item_type": "material",
+      "stack_size": 99,
+      "rarity": "common",
+      "value": 2,
+      "tag_ids": [
+        "wood",
+        "gathered",
+        "building"
+      ]
+    },
+    {
+      "id": "torch_kit",
+      "name": "Torch Kit",
+      "item_type": "utility",
+      "stack_size": 20,
+      "rarity": "common",
+      "value": 8,
+      "tag_ids": [
+        "light",
+        "dungeon",
+        "starter"
+      ]
+    },
+    {
+      "id": "rusted_longsword",
+      "name": "Rusted Longsword",
+      "item_type": "weapon",
+      "stack_size": 1,
+      "rarity": "common",
+      "value": 12,
+      "tag_ids": [
+        "weapon",
+        "starter",
+        "sword"
+      ]
+    },
+    {
+      "id": "tarnished_cuirass",
+      "name": "Tarnished Cuirass",
+      "item_type": "armor",
+      "stack_size": 1,
+      "rarity": "common",
+      "value": 11,
+      "tag_ids": [
+        "armor",
+        "starter",
+        "chest"
+      ]
+    },
+    {
+      "id": "shadowwrap_hood",
+      "name": "Shadowwrap Hood",
+      "item_type": "armor",
+      "stack_size": 1,
+      "rarity": "common",
+      "value": 10,
+      "tag_ids": [
+        "armor",
+        "starter",
+        "head"
+      ]
+    },
+    {
+      "id": "gravebone_charm",
+      "name": "Gravebone Charm",
+      "item_type": "armor",
+      "stack_size": 1,
+      "rarity": "uncommon",
+      "value": 13,
+      "tag_ids": [
+        "armor",
+        "amulet",
+        "occult"
+      ]
+    },
+    {
+      "id": "hunter_bow",
+      "name": "Hunter Bow",
+      "item_type": "weapon",
+      "stack_size": 1,
+      "rarity": "common",
+      "value": 12,
+      "tag_ids": [
+        "weapon",
+        "bow"
+      ]
+    },
+    {
+      "id": "gravewood_staff",
+      "name": "Gravewood Staff",
+      "item_type": "weapon",
+      "stack_size": 1,
+      "rarity": "uncommon",
+      "value": 14,
+      "tag_ids": [
+        "weapon",
+        "staff",
+        "occult"
+      ]
+    },
+    {
+      "id": "starter_hatchet",
+      "name": "Starter Hatchet",
+      "item_type": "tool",
+      "stack_size": 1,
+      "rarity": "common",
+      "value": 6,
+      "tag_ids": [
+        "tool",
+        "hatchet",
+        "starter"
+      ]
+    },
+    {
+      "id": "sunleaf_herb",
+      "name": "Sunleaf Herb",
+      "item_type": "material",
+      "stack_size": 99,
+      "rarity": "common",
+      "value": 2,
+      "tag_ids": [
+        "herb",
+        "gathered",
+        "alchemy"
+      ]
+    },
+    {
+      "id": "iron_ingot",
+      "name": "Iron Ingot",
+      "item_type": "material",
+      "stack_size": 99,
+      "rarity": "common",
+      "value": 6,
+      "tag_ids": [
+        "refined",
+        "smithing"
+      ]
+    }
+  ]
+}
