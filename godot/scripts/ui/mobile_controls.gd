@@ -9,13 +9,13 @@ class_name MobileControls
 
 const MAX_RADIUS: float = 72.0
 const DEAD_ZONE: float = 0.18
-const BUTTON_SIZE: Vector2 = Vector2(132, 58)
-const BUTTON_GAP: float = 10.0
+const BUTTON_SIZE: Vector2 = Vector2(132, 52)
+const BUTTON_GAP: float = 8.0
 const JOYSTICK_SIZE: Vector2 = Vector2(180, 180)
 const KNOB_SIZE: Vector2 = Vector2(72, 72)
 const SAFE_MARGIN: float = 28.0
 const BOTTOM_SAFE_MARGIN: float = 132.0
-const BUTTON_FONT_SIZE: int = 20
+const BUTTON_FONT_SIZE: int = 18
 
 const MOVE_ACTIONS: Array[StringName] = [
 	&"move_forward", &"move_back", &"move_left", &"move_right"
@@ -24,6 +24,7 @@ const ACTION_BUTTONS: Array = [
 	["JUMP",     &"jump"],
 	["SPRINT",   &"sprint"],
 	["INTERACT", &"interact"],
+	["ATTACK",   &"attack"],
 	["CRAFT",    &"craft"],
 	["PLACE",    &"place_build"],
 ]
@@ -97,7 +98,12 @@ func _add_action_button(parent: Node, label: String, action: StringName) -> void
 	btn.text = label
 	btn.custom_minimum_size = BUTTON_SIZE
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	btn.modulate = Color(0.15, 0.85, 1.0, 0.92) if action == &"interact" else Color(1.0, 1.0, 1.0, 0.88)
+	if action == &"interact":
+		btn.modulate = Color(0.15, 0.85, 1.0, 0.92)
+	elif action == &"attack":
+		btn.modulate = Color(1.0, 0.25, 0.2, 0.95)
+	else:
+		btn.modulate = Color(1.0, 1.0, 1.0, 0.88)
 	btn.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
 	btn.button_down.connect(func() -> void: Input.action_press(action))
 	btn.button_up.connect(func() -> void: Input.action_release(action))
