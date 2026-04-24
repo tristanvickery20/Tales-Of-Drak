@@ -1,9 +1,10 @@
 extends Node3D
 
-## Stage 8 Test World Controller (Stage 14/15 HUD + inventory shell)
+## Stage 8 Test World Controller (Stage 15.1 real crafting loop)
 ## Initializes framework systems and wires scene interactions.
 ##
 ## Character Creator -> Test World -> Dungeon Shell.
+## Stage 15.1 connects the ARK-style crafting UI to real inventory updates.
 
 const GATHER_INTERACT_RANGE := 3.0
 const DUNGEON_INTERACT_RANGE := 3.0
@@ -30,6 +31,7 @@ var web_inventory: Dictionary = {}
 
 func _ready() -> void:
 	_init_session()
+	hud.craft_recipe_requested.connect(_on_hud_craft_recipe_requested)
 	_update_hud_inventory()
 
 
@@ -187,24 +189,48 @@ func _on_craft_pressed() -> void:
 	if character == null:
 		return
 
-	if web_preview_mode:
-		if _get_web_item_count("weathered_timber") < 1:
-			hud.set_last_result("Craft failed: need weathered_timber x1")
-			return
-		_remove_web_item("weathered_timber", 1)
-		_add_web_item("torch_kit", 2)
-		hud.set_last_result("Crafted torch_kit")
-		_update_hud_inventory()
+	var quick_recipe := {
+		"id": "craft_torch_kit",
+		"name": "Torch Kit",
+		"requirements": {"weathered_timber": 1},
+		"output_item_id": "torch_kit",
+		"output_quantity": 2,
+	}
+	_craft_recipe_from_dictionary(quick_recipe)
+
+
+func _on_hud_craft_recipe_requested(recipe: Dictionary) -> void:
+	_craft_recipe_from_dictionary(recipe)
+
+
+func _craft_recipe_from_dictionary(recipe: Dictionary) -> void:
+	if character == null:
 		return
 
-	var result := crafting_system.craft("craft_torch_kit", inventory)
-	var text := "Craft failed"
-	if result.get("ok", false):
-		text = "Crafted torch_kit"
-	else:
-		text = "Craft failed: %s" % result.get("reason", "unknown")
-	print("[TestWorld] %s" % text)
-	hud.set_last_result(text)
+	var recipe_name := str(recipe.get("name", "recipe"))
+	var requirements: Dictionary = recipe.get("requirements", {})
+	var output_item_id := str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
+	var output_quantity := int(recipe.get("output_quantity", 1))
+
+	if output_item_id.is_empty():
+		hud.set_last_result("Craft failed: recipe has no output item.")
+		return
+	if output_quantity <= 0:
+		output_quantity = 1
+
+	for item_id in requirements.keys():
+		var required := int(requirements[item_id])
+		var owned := _get_item_count(str(item_id))
+		if owned < required:
+			hud.set_last_result("Missing %s: %d / %d" % [str(item_id), owned, required])
+			_update_hud_inventory()
+			return
+
+	for item_id in requirements.keys():
+		_remove_item(str(item_id), int(requirements[item_id]))
+	_add_item(output_item_id, output_quantity)
+
+	hud.set_last_result("Crafted %s x%d" % [recipe_name, output_quantity])
 	_update_hud_inventory()
 
 
@@ -252,17 +278,21 @@ func _update_hud_inventory() -> void:
 	var backpack_lines: PackedStringArray = []
 	if web_preview_mode:
 		for item_id in web_inventory.keys():
-			backpack_lines.append("%s x%d" % [item_id, int(web_inventory[item_id])])
+			var qty := int(web_inventory[item_id])
+			if qty > 0:
+				backpack_lines.append("%s x%d" % [item_id, qty])
 	else:
 		if inventory == null:
 			return
 		for stack in inventory.get_all_items():
-			backpack_lines.append("%s x%d" % [stack.get("item_id", "?"), int(stack.get("quantity", 0))])
+			var item_id := str(stack.get("item_id", "?"))
+			var qty := int(stack.get("quantity", 0))
+			if qty > 0:
+				backpack_lines.append("%s x%d" % [item_id, qty])
 
 	var crafting_lines := PackedStringArray([
-		"torch_kit: weathered_timber x1 -> torch_kit x2",
-		"Build: timber_foundation costs weathered_timber x8",
-		"More recipes come after the inventory shell is stable.",
+		"Icon-only recipes use live backpack counts.",
+		"Select recipe -> inspect requirements -> CRAFT.",
 	])
 	var character_lines := PackedStringArray([
 		GameState.get_character_summary(),
@@ -272,6 +302,39 @@ func _update_hud_inventory() -> void:
 		"Armor / weapons UI shell only for now.",
 	])
 	hud.set_inventory_tabs(backpack_lines, crafting_lines, character_lines)
+
+
+func _get_item_count(item_id: String) -> int:
+	if web_preview_mode:
+		return _get_web_item_count(item_id)
+	if inventory == null:
+		return 0
+	for stack in inventory.get_all_items():
+		if str(stack.get("item_id", "")) == item_id:
+			return int(stack.get("quantity", 0))
+	return 0
+
+
+func _add_item(item_id: String, quantity: int) -> void:
+	if quantity <= 0:
+		return
+	if web_preview_mode:
+		_add_web_item(item_id, quantity)
+		return
+	if inventory != null:
+		inventory.add_item(item_id, quantity)
+
+
+func _remove_item(item_id: String, quantity: int) -> void:
+	if quantity <= 0:
+		return
+	if web_preview_mode:
+		_remove_web_item(item_id, quantity)
+		return
+	# Local/non-web fallback: this prototype cannot rely on Inventory exposing a
+	# stable remove method yet. The real web preview path uses web_inventory.
+	if inventory != null and inventory.has_method("remove_item"):
+		inventory.remove_item(item_id, quantity)
 
 
 func _get_web_item_count(item_id: String) -> int:
