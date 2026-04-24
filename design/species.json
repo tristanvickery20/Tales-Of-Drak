@@ -6,49 +6,49 @@
       "id": "human",
       "name": "Human",
       "stat_modifiers": {
-        "resolve": 1,
-        "luck": 1
+        "versatility": 1
       },
       "trait_ids": [
         "adaptable",
         "common"
       ],
       "ability_bonuses": {
-        "wisdom": 1
-      },
-      "movement_speed_bonus": 0
-    },
-    {
-      "id": "draeven",
-      "name": "Draeven",
-      "stat_modifiers": {
-        "willpower": 2,
-        "vitality": -1
-      },
-      "trait_ids": [
-        "grave_touched",
-        "rare"
-      ],
-      "ability_bonuses": {
-        "charisma": 1,
-        "constitution": -1
-      },
-      "movement_speed_bonus": 0
-    },
-    {
-      "id": "stonekin",
-      "name": "Stonekin",
-      "stat_modifiers": {
-        "vitality": 2,
-        "dexterity": -1
-      },
-      "trait_ids": [
-        "stout",
-        "craft_focused"
-      ],
-      "ability_bonuses": {
+        "strength": 1,
+        "dexterity": 1,
         "constitution": 1,
-        "dexterity": -1
+        "intelligence": 1,
+        "wisdom": 1,
+        "charisma": 1
+      },
+      "movement_speed_bonus": 0
+    },
+    {
+      "id": "elf",
+      "name": "Elf",
+      "stat_modifiers": {
+        "grace": 2
+      },
+      "trait_ids": [
+        "keen_senses",
+        "fey_ancestry"
+      ],
+      "ability_bonuses": {
+        "dexterity": 2
+      },
+      "movement_speed_bonus": 0
+    },
+    {
+      "id": "dwarf",
+      "name": "Dwarf",
+      "stat_modifiers": {
+        "stout": 2
+      },
+      "trait_ids": [
+        "resilient",
+        "stonecunning"
+      ],
+      "ability_bonuses": {
+        "constitution": 2
       },
       "movement_speed_bonus": -5
     }
