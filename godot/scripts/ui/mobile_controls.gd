@@ -30,7 +30,7 @@ const PRIMARY_ACTIONS: Array = [
 	["ATK", &"attack", "1"],
 	["HVY", &"heavy_attack", "2"],
 	["GRD", &"guard", "3"],
-	["WRD", &"class_ability", "4"],
+	["CLS", &"class_ability", "4"],
 	["USE", &"interact", "5"],
 ]
 const UTILITY_ACTIONS: Array = [
