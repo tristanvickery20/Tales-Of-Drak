@@ -2,7 +2,7 @@ extends Control
 
 ## Stage 14 Character Creator Shell
 ##
-## First-pass D&D-style creator:
+## Landscape-first D&D-style creator:
 ## - Human / Elf / Dwarf
 ## - Fighter / Warlock / Wizard
 ## - subclass auto-pairs for now
@@ -59,11 +59,11 @@ const CLASS_OPTIONS := [
 	},
 ]
 
-@onready var name_input: LineEdit = $Root/Panel/Margin/Scroll/Content/NameInput
-@onready var species_buttons: VBoxContainer = $Root/Panel/Margin/Scroll/Content/SpeciesButtons
-@onready var class_buttons: VBoxContainer = $Root/Panel/Margin/Scroll/Content/ClassButtons
-@onready var preview_label: Label = $Root/Panel/Margin/Scroll/Content/PreviewPanel/PreviewMargin/PreviewLabel
-@onready var start_button: Button = $Root/Panel/Margin/Scroll/Content/StartButton
+@onready var name_input: LineEdit = $Root/Panel/Margin/Columns/Left/NameInput
+@onready var species_buttons: VBoxContainer = $Root/Panel/Margin/Columns/Left/SpeciesButtons
+@onready var class_buttons: VBoxContainer = $Root/Panel/Margin/Columns/Middle/ClassButtons
+@onready var preview_label: Label = $Root/Panel/Margin/Columns/Right/PreviewPanel/PreviewMargin/PreviewLabel
+@onready var start_button: Button = $Root/Panel/Margin/Columns/Right/StartButton
 
 var selected_species_index := 0
 var selected_class_index := 0
@@ -84,7 +84,7 @@ func _build_buttons() -> void:
 		var option: Dictionary = SPECIES_OPTIONS[i]
 		var btn := Button.new()
 		btn.text = option["name"]
-		btn.custom_minimum_size = Vector2(260, 46)
+		btn.custom_minimum_size = Vector2(190, 42)
 		btn.pressed.connect(_select_species.bind(i))
 		species_buttons.add_child(btn)
 		species_button_refs.append(btn)
@@ -92,8 +92,8 @@ func _build_buttons() -> void:
 	for i in range(CLASS_OPTIONS.size()):
 		var option: Dictionary = CLASS_OPTIONS[i]
 		var btn := Button.new()
-		btn.text = "%s / %s" % [option["name"], option["subclass_name"]]
-		btn.custom_minimum_size = Vector2(260, 46)
+		btn.text = "%s\n%s" % [option["name"], option["subclass_name"]]
+		btn.custom_minimum_size = Vector2(210, 54)
 		btn.pressed.connect(_select_class.bind(i))
 		class_buttons.add_child(btn)
 		class_button_refs.append(btn)
