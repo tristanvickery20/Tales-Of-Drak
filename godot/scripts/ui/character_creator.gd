@@ -59,11 +59,11 @@ const CLASS_OPTIONS := [
 	},
 ]
 
-@onready var name_input: LineEdit = $Root/Panel/Margin/Columns/Left/NameInput
-@onready var species_buttons: VBoxContainer = $Root/Panel/Margin/Columns/Left/SpeciesButtons
-@onready var class_buttons: VBoxContainer = $Root/Panel/Margin/Columns/Middle/ClassButtons
-@onready var preview_label: Label = $Root/Panel/Margin/Columns/Right/PreviewLabel
-@onready var start_button: Button = $Root/Panel/Margin/Columns/Right/StartButton
+@onready var name_input: LineEdit = $Root/Panel/Margin/Scroll/Content/NameInput
+@onready var species_buttons: VBoxContainer = $Root/Panel/Margin/Scroll/Content/SpeciesButtons
+@onready var class_buttons: VBoxContainer = $Root/Panel/Margin/Scroll/Content/ClassButtons
+@onready var preview_label: Label = $Root/Panel/Margin/Scroll/Content/PreviewPanel/PreviewMargin/PreviewLabel
+@onready var start_button: Button = $Root/Panel/Margin/Scroll/Content/StartButton
 
 var selected_species_index := 0
 var selected_class_index := 0
@@ -84,7 +84,7 @@ func _build_buttons() -> void:
 		var option: Dictionary = SPECIES_OPTIONS[i]
 		var btn := Button.new()
 		btn.text = option["name"]
-		btn.custom_minimum_size = Vector2(220, 46)
+		btn.custom_minimum_size = Vector2(260, 46)
 		btn.pressed.connect(func(index := i) -> void:
 			selected_species_index = index
 			_update_preview()
@@ -95,8 +95,8 @@ func _build_buttons() -> void:
 	for i in range(CLASS_OPTIONS.size()):
 		var option: Dictionary = CLASS_OPTIONS[i]
 		var btn := Button.new()
-		btn.text = option["name"]
-		btn.custom_minimum_size = Vector2(220, 46)
+		btn.text = "%s / %s" % [option["name"], option["subclass_name"]]
+		btn.custom_minimum_size = Vector2(260, 46)
 		btn.pressed.connect(func(index := i) -> void:
 			selected_class_index = index
 			_update_preview()
@@ -118,7 +118,7 @@ func _update_preview() -> void:
 	if character_name.is_empty():
 		character_name = "Adventurer"
 
-	preview_label.text = "Name: %s\nRace: %s\nClass: %s\nSubclass: %s\n\n%s\n\n%s\n\nStats\n%s\n\nNote: combat still uses the prototype hotbar; class-specific abilities come in a later stage." % [
+	preview_label.text = "Name: %s\nRace: %s\nClass: %s\nSubclass: %s\n\n%s\n\n%s\n\nStats\n%s\n\nNext: appearance, spell lists, and real class-specific abilities." % [
 		character_name,
 		species["name"],
 		clazz["name"],
