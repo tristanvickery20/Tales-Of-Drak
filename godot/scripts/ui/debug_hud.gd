@@ -240,12 +240,13 @@ func _add_column(parent, width):
 	var label = Label.new()
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 14)
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(label)
 	if parent.get_child_count() == 1:
 		primary_button = Button.new()
+		primary_button.custom_minimum_size = Vector2(160, 34)
 		primary_button.pressed.connect(_primary_action)
 		secondary_button = Button.new()
+		secondary_button.custom_minimum_size = Vector2(160, 34)
 		secondary_button.pressed.connect(_secondary_action)
 		box.add_child(primary_button)
 		box.add_child(secondary_button)
@@ -328,7 +329,7 @@ func _show_backpack():
 func _show_crafting():
 	left_label.text = _recipe_details()
 	center_label.text = "CRAFTING\n\nOnly recipe icons show in the grid.\nTap an icon to see requirements."
-	detail_label.text = "Crafting: green/available by material count; CRAFT consumes materials."
+	detail_label.text = "Crafting: select recipe, then tap CRAFT under details."
 	for i in range(40):
 		var slot = Button.new()
 		slot.custom_minimum_size = SLOT_SIZE
@@ -361,7 +362,8 @@ func _item_details():
 
 func _recipe_details():
 	var r = recipes[clamp(selected_recipe_index, 0, recipes.size() - 1)]
-	var text = "ENGRAM: %s / %s\n\n%s\n\nCrafting Requirements\n" % [str(r.get("name", "Recipe")).to_upper(), str(r.get("category", "Primitive")), str(r.get("description", ""))]
+	var output_id = str(r.get("output_item_id", r.get("id", "item")))
+	var text = "ENGRAM: %s / %s\n\n%s\n\nCreates: %s x%d\n\nCrafting Requirements\n" % [str(r.get("name", "Recipe")).to_upper(), str(r.get("category", "Primitive")), str(r.get("description", "")), _item_name(output_id), int(r.get("output_quantity", 1))]
 	for id in r.get("requirements", {}).keys():
 		text += "%s: %d / %d\n" % [_item_name(str(id)), int(inventory_counts.get(str(id), 0)), int(r["requirements"][id])]
 	return text
