@@ -12,6 +12,7 @@ const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
 const DESIGN_DIR_EXPORT := "res://design"
 const DESIGN_DIR_LOCAL := "res://../design"
 const DESIGN_FILE_NAMES := PackedStringArray([
+	"abilities.json",
 	"armor.json",
 	"build_pieces.json",
 	"classes.json",
