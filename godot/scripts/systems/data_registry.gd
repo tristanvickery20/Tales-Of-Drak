@@ -5,15 +5,8 @@ class_name DataRegistry
 ##
 ## Loads modular JSON records from design data.
 ## Local development source of truth lives at repo root: ../design.
-## Web exports can only read bundled project files, so the preview workflow
-## copies repo-root /design into godot/design before export.
-##
-## Expected file shape (Data Contract v0.1):
-## {
-##   "schema_version": "0.1.0",
-##   "record_type": "items",
-##   "records": [ { "id": "..." } ]
-## }
+## Web exports can use bundled files, but the Web Preview pipeline also
+## generates DesignDataEmbedded for maximum reliability on GitHub Pages.
 
 const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
 const DESIGN_DIR_EXPORT := "res://design"
@@ -35,22 +28,21 @@ const DESIGN_FILE_NAMES := PackedStringArray([
 	"weapons.json",
 ])
 
-# Records grouped by record_type, then by id.
-# Example: _records_by_type["item"]["iron_ore"] => { ...record data... }
 var _records_by_type: Dictionary = {}
-
-# Diagnostic data used by debug scripts and logs.
 var _record_counts: Dictionary = {}
 var _loaded_files: PackedStringArray = []
 
 
 func load_all_design_data() -> bool:
-	"""Loads and validates every JSON file in the design data folder."""
 	clear()
+
+	if _load_embedded_design_data():
+		print("[DataRegistry] Loaded %d embedded design files" % _loaded_files.size())
+		return true
 
 	var design_path := _resolve_design_path()
 	if design_path.is_empty():
-		push_error("[DataRegistry] Design directory not found. Tried %s and %s" % [DESIGN_DIR_EXPORT, DESIGN_DIR_LOCAL])
+		push_error("[DataRegistry] Design directory not found. Tried embedded data, %s, and %s" % [DESIGN_DIR_EXPORT, DESIGN_DIR_LOCAL])
 		return false
 
 	var file_names := _list_json_files(design_path)
@@ -105,26 +97,33 @@ func get_loaded_files() -> PackedStringArray:
 	return _loaded_files
 
 
+func _load_embedded_design_data() -> bool:
+	if not ClassDB.class_exists("DesignDataEmbedded"):
+		return false
+
+	var embedded_files: Dictionary = DesignDataEmbedded.FILES
+	if embedded_files.is_empty():
+		return false
+
+	var all_ok := true
+	var file_names := embedded_files.keys()
+	file_names.sort()
+	for file_name in file_names:
+		var raw_text := str(embedded_files[file_name])
+		if not _load_raw_json(raw_text, "embedded://%s" % file_name):
+			all_ok = false
+	return all_ok
+
+
 func _resolve_design_path() -> String:
-	# Prefer bundled export data first. In Web export, res:// is a virtual
-	# package path, so do NOT check it through ProjectSettings.globalize_path().
-	# Use a known file check instead of directory existence because web exports
-	# can bundle files without supporting reliable directory listing.
 	if FileAccess.file_exists("%s/items.json" % DESIGN_DIR_EXPORT):
 		return DESIGN_DIR_EXPORT
-
-	# Fallback for local repo development where the canonical data lives outside
-	# the nested /godot project folder. This path is only expected to work in a
-	# normal local filesystem, not inside a Web export.
 	if FileAccess.file_exists("%s/items.json" % DESIGN_DIR_LOCAL):
 		return DESIGN_DIR_LOCAL
-
 	return ""
 
 
 func _list_json_files(design_path: String) -> PackedStringArray:
-	# For web exports, use the explicit data manifest. Directory listing inside
-	# exported resource packs can be unreliable for non-resource files.
 	if design_path == DESIGN_DIR_EXPORT:
 		return DESIGN_FILE_NAMES.duplicate()
 
@@ -157,25 +156,28 @@ func _load_file(full_path: String) -> bool:
 
 	var raw_text := file.get_as_text()
 	file.close()
+	return _load_raw_json(raw_text, full_path)
 
+
+func _load_raw_json(raw_text: String, source_label: String) -> bool:
 	var parsed: Variant = JSON.parse_string(raw_text)
 	if typeof(parsed) != TYPE_DICTIONARY:
-		push_error("[DataRegistry] Invalid JSON object in file: %s" % full_path)
+		push_error("[DataRegistry] Invalid JSON object in file: %s" % source_label)
 		return false
 
 	var root: Dictionary = parsed
 	for key in REQUIRED_TOP_LEVEL_KEYS:
 		if not root.has(key):
-			push_error("[DataRegistry] Missing top-level key '%s' in file: %s" % [key, full_path])
+			push_error("[DataRegistry] Missing top-level key '%s' in file: %s" % [key, source_label])
 			return false
 
 	if typeof(root["records"]) != TYPE_ARRAY:
-		push_error("[DataRegistry] Key 'records' must be an array in file: %s" % full_path)
+		push_error("[DataRegistry] Key 'records' must be an array in file: %s" % source_label)
 		return false
 
 	var record_type := str(root["record_type"]).strip_edges()
 	if record_type.is_empty():
-		push_error("[DataRegistry] Empty record_type in file: %s" % full_path)
+		push_error("[DataRegistry] Empty record_type in file: %s" % source_label)
 		return false
 
 	if not _records_by_type.has(record_type):
@@ -185,25 +187,25 @@ func _load_file(full_path: String) -> bool:
 	for i in range(records.size()):
 		var entry: Variant = records[i]
 		if typeof(entry) != TYPE_DICTIONARY:
-			push_error("[DataRegistry] Record at index %d is not an object in file: %s" % [i, full_path])
+			push_error("[DataRegistry] Record at index %d is not an object in file: %s" % [i, source_label])
 			return false
 
 		var record: Dictionary = entry
 		if not record.has("id"):
-			push_error("[DataRegistry] Missing record id at index %d in file: %s" % [i, full_path])
+			push_error("[DataRegistry] Missing record id at index %d in file: %s" % [i, source_label])
 			return false
 
 		var record_id := str(record["id"]).strip_edges()
 		if record_id.is_empty():
-			push_error("[DataRegistry] Empty record id at index %d in file: %s" % [i, full_path])
+			push_error("[DataRegistry] Empty record id at index %d in file: %s" % [i, source_label])
 			return false
 
 		if _records_by_type[record_type].has(record_id):
-			push_error("[DataRegistry] Duplicate id '%s' for record_type '%s' in file: %s" % [record_id, record_type, full_path])
+			push_error("[DataRegistry] Duplicate id '%s' for record_type '%s' in file: %s" % [record_id, record_type, source_label])
 			return false
 
 		_records_by_type[record_type][record_id] = record
 
 	_record_counts[record_type] = _records_by_type[record_type].size()
-	_loaded_files.append(full_path)
+	_loaded_files.append(source_label)
 	return true
