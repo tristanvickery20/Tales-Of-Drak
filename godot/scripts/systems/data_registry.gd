@@ -3,8 +3,10 @@ class_name DataRegistry
 
 ## DataRegistry v0.1
 ##
-## Loads modular JSON records from ../design.
-## This class is intentionally gameplay-agnostic and local-first.
+## Loads modular JSON records from design data.
+## Local development source of truth lives at repo root: ../design.
+## Web exports can only read bundled project files, so the preview workflow
+## copies repo-root /design into godot/design before export.
 ##
 ## Expected file shape (Data Contract v0.1):
 ## {
@@ -14,7 +16,8 @@ class_name DataRegistry
 ## }
 
 const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
-const DESIGN_DIR_RELATIVE := "res://../design"
+const DESIGN_DIR_EXPORT := "res://design"
+const DESIGN_DIR_LOCAL := "res://../design"
 
 # Records grouped by record_type, then by id.
 # Example: _records_by_type["item"]["iron_ore"] => { ...record data... }
@@ -26,12 +29,12 @@ var _loaded_files: PackedStringArray = []
 
 
 func load_all_design_data() -> bool:
-	"""Loads and validates every JSON file in ../design."""
+	"""Loads and validates every JSON file in the design data folder."""
 	clear()
 
-	var design_path := ProjectSettings.globalize_path(DESIGN_DIR_RELATIVE)
-	if not DirAccess.dir_exists_absolute(design_path):
-		push_error("[DataRegistry] Design directory not found: %s" % design_path)
+	var design_path := _resolve_design_path()
+	if design_path.is_empty():
+		push_error("[DataRegistry] Design directory not found. Tried %s and %s" % [DESIGN_DIR_EXPORT, DESIGN_DIR_LOCAL])
 		return false
 
 	var file_names := _list_json_files(design_path)
@@ -84,6 +87,21 @@ func get_record_counts() -> Dictionary:
 
 func get_loaded_files() -> PackedStringArray:
 	return _loaded_files
+
+
+func _resolve_design_path() -> String:
+	# Prefer bundled export data first. The GitHub Actions preview workflow copies
+	# repo-root /design into godot/design before exporting the Web build.
+	if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(DESIGN_DIR_EXPORT)):
+		return DESIGN_DIR_EXPORT
+
+	# Fallback for local repo development where the canonical data lives outside
+	# the nested /godot project folder.
+	var local_path := ProjectSettings.globalize_path(DESIGN_DIR_LOCAL)
+	if DirAccess.dir_exists_absolute(local_path):
+		return local_path
+
+	return ""
 
 
 func _list_json_files(design_path: String) -> PackedStringArray:
