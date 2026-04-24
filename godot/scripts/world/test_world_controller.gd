@@ -1,13 +1,10 @@
 extends Node3D
 
-## Stage 8 Test World Controller (Stage 9: Added dungeon portal)
+## Stage 8 Test World Controller (Stage 14: character creator selection)
 ## Initializes framework systems and wires scene interactions.
 ##
-## In Web Preview, this controller runs a tiny self-contained sandbox session.
-## That keeps iPhone testing stable even while the full DataRegistry JSON loader
-## is refined for desktop/local Godot.
-##
-## Stage 9: Added dungeon portal that transitions to the dungeon_shell.tscn scene.
+## Stage 14: reads the selected D&D-style character from GameState.
+## Character Creator -> Test World -> Dungeon Shell.
 
 const GATHER_INTERACT_RANGE := 3.0
 const DUNGEON_INTERACT_RANGE := 3.0
@@ -61,7 +58,15 @@ func _init_session() -> void:
 		return
 
 	var factory := CharacterFactory.new()
-	character = factory.create_level_one_character(registry, "Sandbox Runner", "human", "warden", "ashen_guard")
+	character = factory.create_level_one_character(
+		registry,
+		GameState.character_name,
+		GameState.species_id,
+		GameState.class_id,
+		GameState.subclass_id
+	)
+	if character == null:
+		character = factory.create_level_one_character(registry, "Adventurer", "human", "fighter", "champion")
 	if character == null:
 		hud.set_last_result("Character creation failed.")
 		return
@@ -87,28 +92,28 @@ func _init_session() -> void:
 	gathering_node = GatheringNode.new()
 	gathering_node.load_from_record("tw_node_01", registry.get_record("gathering_node", "weathered_tree_deadfall"))
 
-	hud.set_character_summary(character.display_name, character.class_id)
-	hud.set_last_result("Game session initialized.")
-	print("[TestWorld] Game session initialized.")
+	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
+	hud.set_last_result("Entered world as %s." % GameState.get_character_summary())
+	print("[TestWorld] Game session initialized for %s" % GameState.get_character_summary())
 
 
 func _init_web_preview_session() -> void:
 	web_preview_mode = true
 
 	character = PlayerCharacter.new()
-	character.character_id = "web_sandbox_runner"
-	character.display_name = "Sandbox Runner"
-	character.species_id = "human"
-	character.class_id = "warden"
-	character.subclass_id = "ashen_guard"
+	character.character_id = "web_" + GameState.character_name.to_lower().replace(" ", "_")
+	character.display_name = GameState.character_name
+	character.species_id = GameState.species_id
+	character.class_id = GameState.class_id
+	character.subclass_id = GameState.subclass_id
 	character.level = 1
 	character.xp = 0
 	character.ability_scores = {
-		"strength": 11,
+		"strength": 10,
 		"dexterity": 10,
-		"constitution": 12,
+		"constitution": 10,
 		"intelligence": 10,
-		"wisdom": 11,
+		"wisdom": 10,
 		"charisma": 10,
 	}
 	character.derived_stats = {
@@ -124,26 +129,23 @@ func _init_web_preview_session() -> void:
 		"torch_kit": 1,
 	}
 
-	hud.set_character_summary(character.display_name, character.class_id)
-	hud.set_last_result("Web sandbox session initialized.")
-	print("[TestWorld] Web sandbox session initialized.")
+	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
+	hud.set_last_result("Entered world as %s." % GameState.get_character_summary())
+	print("[TestWorld] Web sandbox session initialized for %s" % GameState.get_character_summary())
 
 
 func _update_prompt() -> void:
-	var prompt := "Move: joystick/WASD | Jump | Sprint | Craft | Place"
+	var prompt := "Move | USE near portal/node | Craft | Place"
 	
-	# Check dungeon portal first (priority)
 	if player.global_position.distance_to(dungeon_portal.global_position) <= DUNGEON_INTERACT_RANGE:
-		prompt += " | Interact Enter Dungeon"
-	# Check gathering node
+		prompt += " | USE: Enter Dungeon"
 	elif player.global_position.distance_to(gather_node_marker.global_position) <= GATHER_INTERACT_RANGE:
-		prompt += " | Interact Gather"
+		prompt += " | USE: Gather"
 	
 	hud.set_prompt(prompt)
 
 
 func _on_interact_pressed() -> void:
-	# Check dungeon portal first
 	if player.global_position.distance_to(dungeon_portal.global_position) <= DUNGEON_INTERACT_RANGE:
 		_enter_dungeon()
 		return
@@ -245,7 +247,7 @@ func _spawn_build_placeholder(world_pos: Vector3) -> void:
 
 
 func _update_hud_inventory() -> void:
-	var lines: PackedStringArray = []
+	var lines: PackedStringArray = [GameState.get_character_summary()]
 	if web_preview_mode:
 		for item_id in web_inventory.keys():
 			lines.append("%s x%d" % [item_id, int(web_inventory[item_id])])
