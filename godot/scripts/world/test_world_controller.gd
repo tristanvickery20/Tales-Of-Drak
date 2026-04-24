@@ -1,9 +1,8 @@
 extends Node3D
 
-## Stage 8 Test World Controller (Stage 14: character creator selection)
+## Stage 8 Test World Controller (Stage 14/15 HUD + inventory shell)
 ## Initializes framework systems and wires scene interactions.
 ##
-## Stage 14: reads the selected D&D-style character from GameState.
 ## Character Creator -> Test World -> Dungeon Shell.
 
 const GATHER_INTERACT_RANGE := 3.0
@@ -92,6 +91,8 @@ func _init_session() -> void:
 	gathering_node = GatheringNode.new()
 	gathering_node.load_from_record("tw_node_01", registry.get_record("gathering_node", "weathered_tree_deadfall"))
 
+	var max_hp := int(character.derived_stats.get("max_health", 11))
+	hud.set_player_health(max_hp, max_hp)
 	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
 	hud.set_last_result("Entered world as %s." % GameState.get_character_summary())
 	print("[TestWorld] Game session initialized for %s" % GameState.get_character_summary())
@@ -129,13 +130,14 @@ func _init_web_preview_session() -> void:
 		"torch_kit": 1,
 	}
 
+	hud.set_player_health(11, 11)
 	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
 	hud.set_last_result("Entered world as %s." % GameState.get_character_summary())
 	print("[TestWorld] Web sandbox session initialized for %s" % GameState.get_character_summary())
 
 
 func _update_prompt() -> void:
-	var prompt := "Move | USE near portal/node | Craft | Place"
+	var prompt := "Move | USE near portal/node | Craft | Place | INV"
 	
 	if player.global_position.distance_to(dungeon_portal.global_position) <= DUNGEON_INTERACT_RANGE:
 		prompt += " | USE: Enter Dungeon"
@@ -247,18 +249,29 @@ func _spawn_build_placeholder(world_pos: Vector3) -> void:
 
 
 func _update_hud_inventory() -> void:
-	var lines: PackedStringArray = [GameState.get_character_summary()]
+	var backpack_lines: PackedStringArray = []
 	if web_preview_mode:
 		for item_id in web_inventory.keys():
-			lines.append("%s x%d" % [item_id, int(web_inventory[item_id])])
-		hud.set_inventory_summary(lines)
-		return
+			backpack_lines.append("%s x%d" % [item_id, int(web_inventory[item_id])])
+	else:
+		if inventory == null:
+			return
+		for stack in inventory.get_all_items():
+			backpack_lines.append("%s x%d" % [stack.get("item_id", "?"), int(stack.get("quantity", 0))])
 
-	if inventory == null:
-		return
-	for stack in inventory.get_all_items():
-		lines.append("%s x%d" % [stack.get("item_id", "?"), int(stack.get("quantity", 0))])
-	hud.set_inventory_summary(lines)
+	var crafting_lines := PackedStringArray([
+		"torch_kit: weathered_timber x1 -> torch_kit x2",
+		"Build: timber_foundation costs weathered_timber x8",
+		"More recipes come after the inventory shell is stable.",
+	])
+	var character_lines := PackedStringArray([
+		GameState.get_character_summary(),
+		"Main hand: empty",
+		"Off hand: empty",
+		"Armor: plain clothes",
+		"Armor / weapons UI shell only for now.",
+	])
+	hud.set_inventory_tabs(backpack_lines, crafting_lines, character_lines)
 
 
 func _get_web_item_count(item_id: String) -> int:
