@@ -5,7 +5,7 @@ extends Node3D
 ##
 ## Features:
 ## - Player spawning
-## - Exercise portal interaction (exit to test world)
+## - Exit portal interaction back to test world
 ## - Enemy placeholder interaction
 ## - Chest placeholder interaction
 ## - Proximity-based interaction hints
@@ -13,7 +13,7 @@ extends Node3D
 ## Touch controls reuse the existing mobile_controls.gd overlay
 ## attached to this scene for iPhone compatibility.
 
-const INTERACT_RANGE := 2.5
+const INTERACT_RANGE := 2.8
 
 @onready var player: ThirdPersonController = $Player
 @onready var enemy_placeholder: Node3D = $EnemyPlaceholder
@@ -22,38 +22,45 @@ const INTERACT_RANGE := 2.5
 @onready var hud: DebugHud = $DebugHud
 
 var last_interaction_prompt: String = ""
+var chest_opened: bool = false
 
 
 func _ready() -> void:
 	print("[DungeonShell] Dungeon initialized.")
 	hud.set_character_summary("Dungeon Shell", "Graybox")
+	hud.set_inventory_summary(PackedStringArray([
+		"Red block = Enemy Placeholder",
+		"Gold block = Chest Placeholder",
+		"Cyan arch = Exit Dungeon"
+	]))
+	hud.set_prompt("Move: joystick/WASD | Interact near objects")
 	hud.set_last_result("Dungeon loaded. Find the chest or exit.")
 
 
 func _process(_delta: float) -> void:
-	_update_interaction_prompts()
+	_update_interaction_prompt()
 
 	if Input.is_action_just_pressed("interact"):
 		_on_interact_pressed()
 
 
-func _update_interaction_prompts() -> void:
-	var new_prompt: String = ""
+func _update_interaction_prompt() -> void:
+	var new_prompt := "Move: joystick/WASD | Interact near objects"
 
 	var dist_to_exit := player.global_position.distance_to(exit_portal.global_position)
 	var dist_to_enemy := player.global_position.distance_to(enemy_placeholder.global_position)
 	var dist_to_chest := player.global_position.distance_to(chest_placeholder.global_position)
 
 	if dist_to_exit < INTERACT_RANGE:
-		new_prompt = "[E] Exit Dungeon"
+		new_prompt = "Interact: Exit Dungeon"
 	elif dist_to_enemy < INTERACT_RANGE:
-		new_prompt = "[E] Talk to Enemy (Placeholder)"
+		new_prompt = "Interact: Enemy Placeholder"
 	elif dist_to_chest < INTERACT_RANGE:
-		new_prompt = "[E] Open Chest"
+		new_prompt = "Interact: Chest Placeholder"
 
 	if new_prompt != last_interaction_prompt:
 		last_interaction_prompt = new_prompt
-		hud.set_character_summary("Prompt", new_prompt if new_prompt != "" else "---")
+		hud.set_prompt(new_prompt)
 
 
 func _on_interact_pressed() -> void:
@@ -61,20 +68,23 @@ func _on_interact_pressed() -> void:
 	var dist_to_enemy := player.global_position.distance_to(enemy_placeholder.global_position)
 	var dist_to_chest := player.global_position.distance_to(chest_placeholder.global_position)
 
-	# Check exit portal first
 	if dist_to_exit < INTERACT_RANGE:
 		_exit_to_test_world()
 		return
 
-	# Check enemy
 	if dist_to_enemy < INTERACT_RANGE:
-		hud.set_last_result("Enemy placeholder — combat coming in a future stage.")
+		hud.set_last_result("Enemy placeholder — combat later.")
 		return
 
-	# Check chest
 	if dist_to_chest < INTERACT_RANGE:
-		hud.set_last_result("Chest opened: reward placeholder.")
+		if chest_opened:
+			hud.set_last_result("Chest already opened.")
+		else:
+			chest_opened = true
+			hud.set_last_result("Chest opened: reward placeholder.")
 		return
+
+	hud.set_last_result("No dungeon object nearby.")
 
 
 func _exit_to_test_world() -> void:
