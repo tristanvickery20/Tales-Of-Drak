@@ -1,23 +1,27 @@
 extends Node3D
 
-## Stage 10 Placeholder Combat Loop
+## Stage 10.1 Combat Readability Pass
 ##
-## Keeps combat intentionally tiny:
+## Keeps combat intentionally tiny, but makes it readable on iPhone:
 ## - approach enemy
 ## - tap ATTACK / press F
-## - enemy HP drops
+## - enemy flashes when hit
+## - HUD shows damage and HP
 ## - enemy is defeated and hidden
-## - chest unlocks
+## - chest visibly changes from locked -> unlocked -> opened
 ## - chest gives placeholder reward
 
 const INTERACT_RANGE := 2.8
 const ATTACK_RANGE := 3.0
 const ENEMY_MAX_HP := 30
 const PLAYER_ATTACK_DAMAGE := 10
+const HIT_FLASH_SECONDS := 0.18
 
 @onready var player: ThirdPersonController = $Player
 @onready var enemy_placeholder: Node3D = $EnemyPlaceholder
+@onready var enemy_mesh: MeshInstance3D = $EnemyPlaceholder/EnemyMesh
 @onready var chest_placeholder: Node3D = $ChestPlaceholder
+@onready var chest_mesh: MeshInstance3D = $ChestPlaceholder/ChestMesh
 @onready var exit_portal: Node3D = $ExitPortal
 @onready var hud: DebugHud = $DebugHud
 
@@ -25,23 +29,59 @@ var last_interaction_prompt: String = ""
 var chest_opened: bool = false
 var enemy_hp: int = ENEMY_MAX_HP
 var enemy_defeated: bool = false
+var hit_flash_timer: float = 0.0
+
+var enemy_default_material: StandardMaterial3D
+var enemy_hit_material: StandardMaterial3D
+var chest_locked_material: StandardMaterial3D
+var chest_unlocked_material: StandardMaterial3D
+var chest_opened_material: StandardMaterial3D
 
 
 func _ready() -> void:
 	print("[DungeonShell] Dungeon initialized.")
-	hud.set_character_summary("Dungeon Shell", "Stage 10")
+	_setup_feedback_materials()
+	hud.set_character_summary("Dungeon Shell", "Stage 10.1")
 	_update_status_lines()
 	hud.set_prompt("Move | ATTACK enemy | INTERACT objects")
-	hud.set_last_result("Dungeon loaded. Defeat the red enemy to unlock the chest.")
+	hud.set_last_result("Defeat the red enemy. Chest is locked until then.")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_hit_flash(delta)
 	_update_interaction_prompt()
 
 	if Input.is_action_just_pressed("attack"):
 		_on_attack_pressed()
 	if Input.is_action_just_pressed("interact"):
 		_on_interact_pressed()
+
+
+func _setup_feedback_materials() -> void:
+	enemy_default_material = _make_material(Color(0.9, 0.1, 0.12, 1), Color(0.4, 0.0, 0.0, 1), 0.6)
+	enemy_hit_material = _make_material(Color(1.0, 1.0, 1.0, 1), Color(1.0, 0.35, 0.2, 1), 1.8)
+	chest_locked_material = _make_material(Color(0.95, 0.62, 0.08, 1), Color(0.25, 0.1, 0.0, 1), 0.35)
+	chest_unlocked_material = _make_material(Color(0.15, 1.0, 0.35, 1), Color(0.0, 0.8, 0.2, 1), 1.0)
+	chest_opened_material = _make_material(Color(0.55, 0.55, 0.55, 1), Color(0.1, 0.1, 0.1, 1), 0.2)
+	enemy_mesh.material_override = enemy_default_material
+	chest_mesh.material_override = chest_locked_material
+
+
+func _make_material(albedo: Color, emission_color: Color, emission_energy: float) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = albedo
+	material.emission_enabled = true
+	material.emission = emission_color
+	material.emission_energy_multiplier = emission_energy
+	return material
+
+
+func _update_hit_flash(delta: float) -> void:
+	if hit_flash_timer <= 0.0:
+		return
+	hit_flash_timer = max(0.0, hit_flash_timer - delta)
+	if hit_flash_timer <= 0.0 and not enemy_defeated:
+		enemy_mesh.material_override = enemy_default_material
 
 
 func _update_interaction_prompt() -> void:
@@ -56,9 +96,14 @@ func _update_interaction_prompt() -> void:
 	elif not enemy_defeated and dist_to_enemy < ATTACK_RANGE:
 		new_prompt = "ATTACK: Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
 	elif enemy_defeated and dist_to_enemy < INTERACT_RANGE:
-		new_prompt = "Enemy defeated"
+		new_prompt = "Enemy defeated. Chest unlocked."
 	elif dist_to_chest < INTERACT_RANGE:
-		new_prompt = "INTERACT: Chest %s" % ["Unlocked" if enemy_defeated else "Locked"]
+		if chest_opened:
+			new_prompt = "Chest opened"
+		elif enemy_defeated:
+			new_prompt = "INTERACT: Open unlocked chest"
+		else:
+			new_prompt = "Chest locked: defeat enemy"
 
 	if new_prompt != last_interaction_prompt:
 		last_interaction_prompt = new_prompt
@@ -67,21 +112,25 @@ func _update_interaction_prompt() -> void:
 
 func _on_attack_pressed() -> void:
 	if enemy_defeated:
-		hud.set_last_result("Enemy already defeated.")
+		hud.set_last_result("Enemy already defeated. Open the chest.")
 		return
 
 	var dist_to_enemy := player.global_position.distance_to(enemy_placeholder.global_position)
 	if dist_to_enemy > ATTACK_RANGE:
-		hud.set_last_result("Too far to attack.")
+		hud.set_last_result("Too far to attack. Move closer to the red enemy.")
 		return
 
 	enemy_hp = max(0, enemy_hp - PLAYER_ATTACK_DAMAGE)
+	hit_flash_timer = HIT_FLASH_SECONDS
+	enemy_mesh.material_override = enemy_hit_material
+
 	if enemy_hp <= 0:
 		enemy_defeated = true
 		enemy_placeholder.visible = false
-		hud.set_last_result("Enemy defeated. Chest unlocked.")
+		chest_mesh.material_override = chest_unlocked_material
+		hud.set_last_result("Enemy defeated! Chest unlocked.")
 	else:
-		hud.set_last_result("Hit enemy for %d. HP: %d/%d" % [PLAYER_ATTACK_DAMAGE, enemy_hp, ENEMY_MAX_HP])
+		hud.set_last_result("Hit enemy: -%d HP. Enemy HP: %d/%d" % [PLAYER_ATTACK_DAMAGE, enemy_hp, ENEMY_MAX_HP])
 
 	_update_status_lines()
 	_update_interaction_prompt()
@@ -100,7 +149,7 @@ func _on_interact_pressed() -> void:
 		if enemy_defeated:
 			hud.set_last_result("Enemy defeated. Chest is unlocked.")
 		else:
-			hud.set_last_result("Enemy placeholder. Use ATTACK.")
+			hud.set_last_result("Enemy blocks the reward. Use ATTACK.")
 		return
 
 	if dist_to_chest < INTERACT_RANGE:
@@ -116,12 +165,15 @@ func _on_chest_interact() -> void:
 		return
 
 	if chest_opened:
-		hud.set_last_result("Chest already opened.")
+		hud.set_last_result("Chest already opened. Reward claimed.")
 		return
 
 	chest_opened = true
+	chest_mesh.material_override = chest_opened_material
+	chest_mesh.scale = Vector3(1.15, 0.55, 1.0)
 	hud.set_last_result("Chest opened: +1 placeholder reward.")
 	_update_status_lines()
+	_update_interaction_prompt()
 
 
 func _update_status_lines() -> void:
@@ -130,7 +182,7 @@ func _update_status_lines() -> void:
 	hud.set_inventory_summary(PackedStringArray([
 		enemy_status,
 		chest_status,
-		"Cyan arch = Exit Dungeon",
+		"Red = Enemy | Gold/Green = Chest | Cyan = Exit",
 	]))
 
 
