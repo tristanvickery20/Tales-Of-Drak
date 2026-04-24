@@ -18,6 +18,22 @@ class_name DataRegistry
 const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
 const DESIGN_DIR_EXPORT := "res://design"
 const DESIGN_DIR_LOCAL := "res://../design"
+const DESIGN_FILE_NAMES := PackedStringArray([
+	"armor.json",
+	"build_pieces.json",
+	"classes.json",
+	"crafting_recipes.json",
+	"dungeons.json",
+	"enemies.json",
+	"gathering_nodes.json",
+	"items.json",
+	"mounts.json",
+	"pets.json",
+	"quests.json",
+	"species.json",
+	"subclasses.json",
+	"weapons.json",
+])
 
 # Records grouped by record_type, then by id.
 # Example: _records_by_type["item"]["iron_ore"] => { ...record data... }
@@ -92,20 +108,26 @@ func get_loaded_files() -> PackedStringArray:
 func _resolve_design_path() -> String:
 	# Prefer bundled export data first. In Web export, res:// is a virtual
 	# package path, so do NOT check it through ProjectSettings.globalize_path().
-	if DirAccess.open(DESIGN_DIR_EXPORT) != null:
+	# Use a known file check instead of directory existence because web exports
+	# can bundle files without supporting reliable directory listing.
+	if FileAccess.file_exists("%s/items.json" % DESIGN_DIR_EXPORT):
 		return DESIGN_DIR_EXPORT
 
 	# Fallback for local repo development where the canonical data lives outside
 	# the nested /godot project folder. This path is only expected to work in a
 	# normal local filesystem, not inside a Web export.
-	var local_path := ProjectSettings.globalize_path(DESIGN_DIR_LOCAL)
-	if DirAccess.dir_exists_absolute(local_path):
+	if FileAccess.file_exists("%s/items.json" % DESIGN_DIR_LOCAL):
 		return DESIGN_DIR_LOCAL
 
 	return ""
 
 
 func _list_json_files(design_path: String) -> PackedStringArray:
+	# For web exports, use the explicit data manifest. Directory listing inside
+	# exported resource packs can be unreliable for non-resource files.
+	if design_path == DESIGN_DIR_EXPORT:
+		return DESIGN_FILE_NAMES.duplicate()
+
 	var file_names: PackedStringArray = []
 	var dir := DirAccess.open(design_path)
 	if dir == null:
