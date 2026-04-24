@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=42 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/dungeon_shell_controller.gd" id="1_ctrl"]
 [ext_resource type="Script" path="res://scripts/player/third_person_controller.gd" id="2_player"]
@@ -6,31 +6,71 @@
 [ext_resource type="Script" path="res://scripts/ui/mobile_controls.gd" id="4_mobile"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(0.06, 0.06, 0.07, 1)
+albedo_color = Color(0.045, 0.04, 0.045, 1)
+roughness = 0.92
 
 [sub_resource type="StandardMaterial3D" id="Mat_wall"]
-albedo_color = Color(0.36, 0.36, 0.38, 1)
+albedo_color = Color(0.22, 0.22, 0.25, 1)
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall_trim"]
+albedo_color = Color(0.12, 0.115, 0.13, 1)
+roughness = 0.95
 
 [sub_resource type="StandardMaterial3D" id="Mat_enemy"]
-albedo_color = Color(0.9, 0.1, 0.12, 1)
+albedo_color = Color(0.65, 0.05, 0.075, 1)
 emission_enabled = true
-emission = Color(0.4, 0, 0, 1)
-emission_energy_multiplier = 0.6
+emission = Color(0.28, 0, 0, 1)
+emission_energy_multiplier = 0.7
+roughness = 0.65
 
-[sub_resource type="StandardMaterial3D" id="Mat_chest"]
-albedo_color = Color(1, 0.78, 0.15, 1)
+[sub_resource type="StandardMaterial3D" id="Mat_enemy_core"]
+albedo_color = Color(1, 0.12, 0.08, 1)
+emission_enabled = true
+emission = Color(1, 0.05, 0.02, 1)
+emission_energy_multiplier = 1.25
+
+[sub_resource type="StandardMaterial3D" id="Mat_chest_wood"]
+albedo_color = Color(0.42, 0.22, 0.09, 1)
+roughness = 0.75
+
+[sub_resource type="StandardMaterial3D" id="Mat_chest_metal"]
+albedo_color = Color(0.92, 0.72, 0.18, 1)
 emission_enabled = true
 emission = Color(0.35, 0.22, 0, 1)
-emission_energy_multiplier = 0.45
+emission_energy_multiplier = 0.35
+roughness = 0.42
 
 [sub_resource type="StandardMaterial3D" id="Mat_exit_frame"]
-albedo_color = Color(0.12, 0.75, 1, 1)
+albedo_color = Color(0.08, 0.62, 0.95, 1)
+emission_enabled = true
+emission = Color(0.02, 0.45, 0.95, 1)
+emission_energy_multiplier = 0.5
+roughness = 0.55
 
 [sub_resource type="StandardMaterial3D" id="Mat_exit_core"]
 albedo_color = Color(0.05, 0.95, 1, 1)
 emission_enabled = true
 emission = Color(0, 0.75, 1, 1)
-emission_energy_multiplier = 1.2
+emission_energy_multiplier = 1.35
+
+[sub_resource type="StandardMaterial3D" id="Mat_player_cloth"]
+albedo_color = Color(0.12, 0.22, 0.32, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Mat_player_skin"]
+albedo_color = Color(0.86, 0.66, 0.48, 1)
+roughness = 0.65
+
+[sub_resource type="StandardMaterial3D" id="Mat_player_boot"]
+albedo_color = Color(0.08, 0.055, 0.035, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_torch"]
+albedo_color = Color(1, 0.58, 0.12, 1)
+emission_enabled = true
+emission = Color(1, 0.38, 0.05, 1)
+emission_energy_multiplier = 0.85
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
 size = Vector2(18, 18)
@@ -50,14 +90,26 @@ size = Vector3(0.4, 3, 18)
 [sub_resource type="BoxShape3D" id="BoxShape_wall_side"]
 size = Vector3(0.4, 3, 18)
 
-[sub_resource type="BoxMesh" id="BoxMesh_enemy"]
-size = Vector3(1.2, 1.8, 1.2)
+[sub_resource type="BoxMesh" id="BoxMesh_enemy_torso"]
+size = Vector3(0.9, 1.25, 0.65)
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy_head"]
+size = Vector3(0.55, 0.55, 0.55)
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy_arm"]
+size = Vector3(0.22, 0.85, 0.24)
 
 [sub_resource type="BoxShape3D" id="BoxShape_enemy"]
 size = Vector3(1.2, 1.8, 1.2)
 
-[sub_resource type="BoxMesh" id="BoxMesh_chest"]
-size = Vector3(1.4, 0.8, 1.0)
+[sub_resource type="BoxMesh" id="BoxMesh_chest_base"]
+size = Vector3(1.45, 0.55, 1.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_chest_lid"]
+size = Vector3(1.55, 0.25, 1.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_chest_lock"]
+size = Vector3(0.26, 0.28, 0.08)
 
 [sub_resource type="BoxShape3D" id="BoxShape_chest"]
 size = Vector3(1.4, 0.8, 1.0)
@@ -71,23 +123,46 @@ size = Vector3(2.3, 0.3, 0.3)
 [sub_resource type="BoxMesh" id="BoxMesh_exit_core"]
 size = Vector3(1.35, 1.65, 0.08)
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+[sub_resource type="BoxMesh" id="BoxMesh_player_torso"]
+size = Vector3(0.65, 0.9, 0.35)
+
+[sub_resource type="BoxMesh" id="BoxMesh_player_head"]
+size = Vector3(0.42, 0.42, 0.42)
+
+[sub_resource type="BoxMesh" id="BoxMesh_player_arm"]
+size = Vector3(0.2, 0.75, 0.22)
+
+[sub_resource type="BoxMesh" id="BoxMesh_player_leg"]
+size = Vector3(0.22, 0.78, 0.24)
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
 radius = 0.45
 height = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_pillar"]
+size = Vector3(0.7, 2.5, 0.7)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor_trim"]
+size = Vector3(16, 0.045, 0.18)
 
 [node name="DungeonShell" type="Node3D"]
 script = ExtResource("1_ctrl")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.5, 0, 0.353553, 0.612373, -0.707107, 0.353553, 0.612372, 0.707107, 0, 6, 0)
-light_energy = 1.45
+light_energy = 0.9
 
 [node name="RoomLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
-light_energy = 0.65
+light_color = Color(0.75, 0.84, 1, 1)
+light_energy = 0.52
 omni_range = 16.0
+
+[node name="WarmTorchLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 2.2, -6.5)
+light_color = Color(1, 0.52, 0.18, 1)
+light_energy = 0.62
+omni_range = 6.5
 
 [node name="Floor" type="StaticBody3D" parent="."]
 
@@ -97,6 +172,16 @@ material_override = SubResource("Mat_floor")
 
 [node name="FloorCollision" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("BoxShape_floor")
+
+[node name="FloorTrimNorth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -7.7)
+mesh = SubResource("BoxMesh_floor_trim")
+material_override = SubResource("Mat_wall_trim")
+
+[node name="FloorTrimSouth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 7.7)
+mesh = SubResource("BoxMesh_floor_trim")
+material_override = SubResource("Mat_wall_trim")
 
 [node name="Walls" type="Node3D" parent="."]
 
@@ -140,6 +225,21 @@ material_override = SubResource("Mat_wall")
 [node name="WestCollision" type="CollisionShape3D" parent="Walls/WallWest"]
 shape = SubResource("BoxShape_wall_side")
 
+[node name="PillarA" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 1.25, -6.5)
+mesh = SubResource("BoxMesh_pillar")
+material_override = SubResource("Mat_wall_trim")
+
+[node name="PillarB" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 1.25, -6.5)
+mesh = SubResource("BoxMesh_pillar")
+material_override = SubResource("Mat_wall_trim")
+
+[node name="TorchA" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.32, 0, 0, 0, 0.32, 0, 0, 0, 0.32, -6.5, 2.45, -6.1)
+mesh = SubResource("BoxMesh_enemy_head")
+material_override = SubResource("Mat_torch")
+
 [node name="PlayerSpawn" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4.5)
 
@@ -147,8 +247,28 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4.5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.25, 0.9, -2.5)
 
 [node name="EnemyMesh" type="MeshInstance3D" parent="EnemyPlaceholder"]
-mesh = SubResource("BoxMesh_enemy")
+mesh = SubResource("BoxMesh_enemy_torso")
 material_override = SubResource("Mat_enemy")
+
+[node name="EnemyHead" type="MeshInstance3D" parent="EnemyPlaceholder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+mesh = SubResource("BoxMesh_enemy_head")
+material_override = SubResource("Mat_enemy_core")
+
+[node name="EnemyLeftArm" type="MeshInstance3D" parent="EnemyPlaceholder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, 0.15, 0)
+mesh = SubResource("BoxMesh_enemy_arm")
+material_override = SubResource("Mat_enemy")
+
+[node name="EnemyRightArm" type="MeshInstance3D" parent="EnemyPlaceholder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62, 0.15, 0)
+mesh = SubResource("BoxMesh_enemy_arm")
+material_override = SubResource("Mat_enemy")
+
+[node name="EnemyCoreGlow" type="MeshInstance3D" parent="EnemyPlaceholder"]
+transform = Transform3D(0.42, 0, 0, 0, 0.12, 0, 0, 0, 0.42, 0, 0.08, -0.34)
+mesh = SubResource("BoxMesh_enemy_head")
+material_override = SubResource("Mat_enemy_core")
 
 [node name="EnemyCollision" type="CollisionShape3D" parent="EnemyPlaceholder"]
 shape = SubResource("BoxShape_enemy")
@@ -157,8 +277,18 @@ shape = SubResource("BoxShape_enemy")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.25, 0.4, -2.5)
 
 [node name="ChestMesh" type="MeshInstance3D" parent="ChestPlaceholder"]
-mesh = SubResource("BoxMesh_chest")
-material_override = SubResource("Mat_chest")
+mesh = SubResource("BoxMesh_chest_base")
+material_override = SubResource("Mat_chest_wood")
+
+[node name="ChestLid" type="MeshInstance3D" parent="ChestPlaceholder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
+mesh = SubResource("BoxMesh_chest_lid")
+material_override = SubResource("Mat_chest_metal")
+
+[node name="ChestLock" type="MeshInstance3D" parent="ChestPlaceholder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -0.55)
+mesh = SubResource("BoxMesh_chest_lock")
+material_override = SubResource("Mat_chest_metal")
 
 [node name="ChestCollision" type="CollisionShape3D" parent="ChestPlaceholder"]
 shape = SubResource("BoxShape_chest")
@@ -167,31 +297,64 @@ shape = SubResource("BoxShape_chest")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7)
 
 [node name="ExitLeftPillar" type="MeshInstance3D" parent="ExitPortal"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.95, 1.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1.08, 0, 0, 0, 1, -0.95, 1.18, 0)
 mesh = SubResource("BoxMesh_exit_pillar")
 material_override = SubResource("Mat_exit_frame")
 
 [node name="ExitRightPillar" type="MeshInstance3D" parent="ExitPortal"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.95, 1.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1.08, 0, 0, 0, 1, 0.95, 1.18, 0)
 mesh = SubResource("BoxMesh_exit_pillar")
 material_override = SubResource("Mat_exit_frame")
 
 [node name="ExitTop" type="MeshInstance3D" parent="ExitPortal"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)
+transform = Transform3D(1.08, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.28, 0)
 mesh = SubResource("BoxMesh_exit_top")
 material_override = SubResource("Mat_exit_frame")
 
 [node name="ExitCore" type="MeshInstance3D" parent="ExitPortal"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -0.06)
+transform = Transform3D(1, 0, 0, 0, 1.08, 0, 0, 0, 1, 0, 1.1, -0.06)
 mesh = SubResource("BoxMesh_exit_core")
 material_override = SubResource("Mat_exit_core")
+
+[node name="ExitGlowLight" type="OmniLight3D" parent="ExitPortal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -0.18)
+light_color = Color(0.04, 0.75, 1, 1)
+light_energy = 0.56
+omni_range = 5.0
 
 [node name="Player" type="CharacterBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4.5)
 script = ExtResource("2_player")
 
 [node name="BodyMesh" type="MeshInstance3D" parent="Player"]
-mesh = SubResource("CapsuleMesh_player")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("BoxMesh_player_torso")
+material_override = SubResource("Mat_player_cloth")
+
+[node name="HeadMesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.06, 0)
+mesh = SubResource("BoxMesh_player_head")
+material_override = SubResource("Mat_player_skin")
+
+[node name="LeftArmMesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.48, 0.28, 0)
+mesh = SubResource("BoxMesh_player_arm")
+material_override = SubResource("Mat_player_cloth")
+
+[node name="RightArmMesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.48, 0.28, 0)
+mesh = SubResource("BoxMesh_player_arm")
+material_override = SubResource("Mat_player_cloth")
+
+[node name="LeftLegMesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, -0.45, 0)
+mesh = SubResource("BoxMesh_player_leg")
+material_override = SubResource("Mat_player_boot")
+
+[node name="RightLegMesh" type="MeshInstance3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.45, 0)
+mesh = SubResource("BoxMesh_player_leg")
+material_override = SubResource("Mat_player_boot")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
 shape = SubResource("CapsuleShape_player")
