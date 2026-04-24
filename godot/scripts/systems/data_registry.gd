@@ -7,6 +7,8 @@ class_name DataRegistry
 ## Local development source of truth lives at repo root: ../design.
 ## Web exports can use bundled files, but the Web Preview pipeline also
 ## generates DesignDataEmbedded for maximum reliability on GitHub Pages.
+## If both file-based and embedded loading fail, this registry falls back to a
+## minimum Stage 8 sandbox dataset so the web preview remains playable.
 
 const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
 const DESIGN_DIR_EXPORT := "res://design"
@@ -42,27 +44,23 @@ func load_all_design_data() -> bool:
 		return true
 
 	var design_path := _resolve_design_path()
-	if design_path.is_empty():
-		push_error("[DataRegistry] Design directory not found. Tried embedded data, %s, and %s" % [DESIGN_DIR_EXPORT, DESIGN_DIR_LOCAL])
-		return false
+	if not design_path.is_empty():
+		var file_names := _list_json_files(design_path)
+		var all_ok := not file_names.is_empty()
+		for file_name in file_names:
+			var full_path := "%s/%s" % [design_path, file_name]
+			if not _load_file(full_path):
+				all_ok = false
 
-	var file_names := _list_json_files(design_path)
-	if file_names.is_empty():
-		push_error("[DataRegistry] No JSON files found in: %s" % design_path)
-		return false
+		if all_ok:
+			print("[DataRegistry] Loaded %d files from %s" % [_loaded_files.size(), design_path])
+			for record_type in _record_counts.keys():
+				print("[DataRegistry] %s: %d records" % [record_type, _record_counts[record_type]])
+			return true
 
-	var all_ok := true
-	for file_name in file_names:
-		var full_path := "%s/%s" % [design_path, file_name]
-		if not _load_file(full_path):
-			all_ok = false
-
-	if all_ok:
-		print("[DataRegistry] Loaded %d files from %s" % [_loaded_files.size(), design_path])
-		for record_type in _record_counts.keys():
-			print("[DataRegistry] %s: %d records" % [record_type, _record_counts[record_type]])
-
-	return all_ok
+	clear()
+	push_warning("[DataRegistry] Design data file loading failed. Using minimum Stage 8 sandbox fallback data.")
+	return _load_minimum_sandbox_data()
 
 
 func clear() -> void:
@@ -119,6 +117,71 @@ func _load_embedded_design_data() -> bool:
 		if not _load_raw_json(raw_text, "embedded://%s" % file_name):
 			all_ok = false
 	return all_ok
+
+
+func _load_minimum_sandbox_data() -> bool:
+	_add_record("species", {
+		"id": "human",
+		"name": "Human",
+		"ability_bonuses": {"wisdom": 1},
+		"movement_speed_bonus": 0,
+	})
+	_add_record("class", {
+		"id": "warden",
+		"name": "Warden",
+		"role": "frontline_defender",
+		"resource_type": "stamina",
+		"starter_ability_bonuses": {"strength": 1, "constitution": 1},
+	})
+	_add_record("subclass", {
+		"id": "ashen_guard",
+		"class_id": "warden",
+		"name": "Ashen Guard",
+		"starter_ability_bonuses": {"constitution": 1},
+	})
+
+	_add_record("item", {"id": "starter_hatchet", "name": "Starter Hatchet", "item_type": "tool", "stack_size": 1, "rarity": "common", "value": 6, "tag_ids": ["tool", "hatchet", "starter"]})
+	_add_record("item", {"id": "weathered_timber", "name": "Weathered Timber", "item_type": "material", "stack_size": 99, "rarity": "common", "value": 2, "tag_ids": ["wood", "gathered", "building"]})
+	_add_record("item", {"id": "torch_kit", "name": "Torch Kit", "item_type": "utility", "stack_size": 20, "rarity": "common", "value": 8, "tag_ids": ["light", "dungeon", "starter"]})
+
+	_add_record("gathering_node", {
+		"id": "weathered_tree_deadfall",
+		"display_name": "Weathered Deadfall",
+		"required_tool_item_id": "starter_hatchet",
+		"output_item_id": "weathered_timber",
+		"output_quantity_min": 2,
+		"output_quantity_max": 4,
+		"respawn_seconds": 240,
+	})
+	_add_record("crafting_recipe", {
+		"id": "craft_torch_kit",
+		"recipe_id": "craft_torch_kit",
+		"display_name": "Craft Torch Kit",
+		"input_item_counts": {"weathered_timber": 1},
+		"output_item_counts": {"torch_kit": 2},
+		"required_station_id": "campfire",
+		"crafting_seconds": 3,
+	})
+	_add_record("build_piece", {
+		"id": "timber_foundation",
+		"display_name": "Timber Foundation",
+		"category": "foundation",
+		"placement_type": "ground_snap",
+		"required_item_counts": {"weathered_timber": 8},
+		"max_health": 200,
+		"tags": ["starter", "timber"],
+	})
+
+	_loaded_files.append("fallback://minimum_stage_8_sandbox_data")
+	print("[DataRegistry] Loaded minimum Stage 8 sandbox fallback data")
+	return true
+
+
+func _add_record(record_type: String, record: Dictionary) -> void:
+	if not _records_by_type.has(record_type):
+		_records_by_type[record_type] = {}
+	_records_by_type[record_type][str(record.get("id", ""))] = record
+	_record_counts[record_type] = _records_by_type[record_type].size()
 
 
 func _resolve_design_path() -> String:
