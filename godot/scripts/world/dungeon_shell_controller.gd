@@ -1,16 +1,11 @@
 extends Node3D
 
-## Stage 13 Data-Driven Combat Abilities
+## Dungeon combat controller with Stage 15 HUD / inventory shell support.
 ##
-## Same playable loop as Stage 12, but core ability values now come from
-## design/abilities.json when available:
-## - basic_attack
-## - heavy_attack
-## - guard
-## - warden_bulwark
-##
-## Safe fallbacks are kept so local/web preview stays playable even if design
-## loading fails.
+## Keeps the existing prototype combat loop, while adding:
+## - player HP fed into the top-left HUD health bar
+## - enemy overhead HP readout
+## - inventory tabs for Backpack / Crafting / Character
 
 const INTERACT_RANGE := 2.8
 const ATTACK_RANGE := 3.0
@@ -30,7 +25,7 @@ const DAMAGE_FLASH_SECONDS := 0.22
 const ABILITY_BASIC_ATTACK := "basic_attack"
 const ABILITY_HEAVY_ATTACK := "heavy_attack"
 const ABILITY_GUARD := "guard"
-const ABILITY_WARDEN_BULWARK := "warden_bulwark"
+const ABILITY_CLASS_FEATURE := "warden_bulwark"
 
 const FALLBACK_ABILITIES := {
 	ABILITY_BASIC_ATTACK: {
@@ -54,8 +49,8 @@ const FALLBACK_ABILITIES := {
 		"duration_seconds": 2.0,
 		"guard_damage_reduction": 0.5,
 	},
-	ABILITY_WARDEN_BULWARK: {
-		"display_name": "Warden Bulwark",
+	ABILITY_CLASS_FEATURE: {
+		"display_name": "Class Feature",
 		"damage": 8,
 		"cooldown_seconds": 6.0,
 		"duration_seconds": 1.5,
@@ -84,15 +79,15 @@ var hit_flash_timer: float = 0.0
 var player_flash_timer: float = 0.0
 var enemy_damage_cooldown_timer: float = 0.0
 var heavy_attack_cooldown_timer: float = 0.0
-var warden_ability_cooldown_timer: float = 0.0
+var class_feature_cooldown_timer: float = 0.0
 var guard_timer: float = 0.0
 var guard_damage_reduction: float = 0.5
 var enemy_state: EnemyState = EnemyState.IDLE
 var enemy_spawn_position: Vector3 = Vector3.ZERO
 var last_enemy_hit_message: String = ""
-var last_ability_message: String = "Abilities ready: Attack / Heavy / Guard / Warden"
 var ability_records: Dictionary = {}
 var ability_source_label: String = "fallback"
+var enemy_hp_label: Label3D
 
 var enemy_default_material: StandardMaterial3D
 var enemy_hit_material: StandardMaterial3D
@@ -109,10 +104,14 @@ func _ready() -> void:
 	enemy_spawn_position = enemy_placeholder.global_position
 	_load_ability_data()
 	_setup_feedback_materials()
-	hud.set_character_summary("Dungeon Shell", "Stage 13")
+	_build_enemy_health_label()
+	hud.set_player_health(player_hp, PLAYER_MAX_HP)
+	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
 	_update_status_lines()
-	hud.set_prompt("ATTACK | HEAVY | GUARD | WARDEN")
-	hud.set_last_result("Stage 13: abilities loaded from %s." % ability_source_label)
+	_update_inventory_tabs()
+	_update_enemy_health_label()
+	hud.set_prompt("ATTACK | HEAVY | GUARD | CLASS")
+	hud.set_last_result("Dungeon entered as %s." % GameState.get_character_summary())
 
 
 func _process(delta: float) -> void:
@@ -130,6 +129,32 @@ func _process(delta: float) -> void:
 		_on_class_ability_pressed()
 	if Input.is_action_just_pressed("interact"):
 		_on_interact_pressed()
+
+
+func _build_enemy_health_label() -> void:
+	enemy_hp_label = Label3D.new()
+	enemy_hp_label.name = "EnemyHealthLabel"
+	enemy_hp_label.position = Vector3(0.0, 1.65, 0.0)
+	enemy_hp_label.text = "HP"
+	enemy_hp_label.font_size = 44
+	enemy_hp_label.pixel_size = 0.012
+	enemy_hp_label.modulate = Color(1.0, 0.08, 0.08, 1.0)
+	enemy_hp_label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
+	enemy_hp_label.outline_size = 10
+	enemy_placeholder.add_child(enemy_hp_label)
+
+
+func _update_enemy_health_label() -> void:
+	if enemy_hp_label == null:
+		return
+	if enemy_defeated:
+		enemy_hp_label.visible = false
+		return
+	enemy_hp_label.visible = true
+	var filled_count := int(round((float(enemy_hp) / float(ENEMY_MAX_HP)) * 10.0))
+	filled_count = clamp(filled_count, 0, 10)
+	var empty_count := 10 - filled_count
+	enemy_hp_label.text = "%d/%d\n%s%s" % [enemy_hp, ENEMY_MAX_HP, "█".repeat(filled_count), "░".repeat(empty_count)]
 
 
 func _load_ability_data() -> void:
@@ -248,8 +273,8 @@ func _update_timers(delta: float) -> void:
 		enemy_damage_cooldown_timer = max(0.0, enemy_damage_cooldown_timer - delta)
 	if heavy_attack_cooldown_timer > 0.0:
 		heavy_attack_cooldown_timer = max(0.0, heavy_attack_cooldown_timer - delta)
-	if warden_ability_cooldown_timer > 0.0:
-		warden_ability_cooldown_timer = max(0.0, warden_ability_cooldown_timer - delta)
+	if class_feature_cooldown_timer > 0.0:
+		class_feature_cooldown_timer = max(0.0, class_feature_cooldown_timer - delta)
 
 
 func _update_enemy_ai(delta: float) -> void:
@@ -326,6 +351,7 @@ func _try_enemy_touch_damage() -> void:
 		last_enemy_hit_message = "Enemy hit you: -%d HP" % damage
 
 	player_hp = max(0, player_hp - damage)
+	hud.set_player_health(player_hp, PLAYER_MAX_HP)
 	player_flash_timer = DAMAGE_FLASH_SECONDS
 	player_mesh.material_override = player_damage_material if guard_timer <= 0.0 else player_guard_material
 
@@ -336,32 +362,33 @@ func _try_enemy_touch_damage() -> void:
 		hud.set_last_result("%s. Player HP: %d/%d" % [last_enemy_hit_message, player_hp, PLAYER_MAX_HP])
 
 	_update_status_lines()
+	_update_inventory_tabs()
 
 
 func _update_interaction_prompt() -> void:
-	var new_prompt := "ATTACK | HEAVY | GUARD | WARDEN"
+	var new_prompt := "ATTACK | HEAVY | GUARD | CLASS"
 
 	var dist_to_exit := player.global_position.distance_to(exit_portal.global_position)
 	var dist_to_enemy := player.global_position.distance_to(enemy_placeholder.global_position)
 	var dist_to_chest := player.global_position.distance_to(chest_placeholder.global_position)
 
 	if player_defeated:
-		new_prompt = "Defeated. INTERACT with cyan exit to reset."
+		new_prompt = "Defeated. USE cyan exit to reset."
 	elif dist_to_exit < INTERACT_RANGE:
-		new_prompt = "INTERACT: Exit Dungeon"
+		new_prompt = "USE: Exit Dungeon"
 	elif not enemy_defeated and dist_to_enemy < ATTACK_RANGE:
-		new_prompt = "ATTACK/HEAVY/WARDEN: Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
+		new_prompt = "ATK/HVY/CLS: Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
 	elif not enemy_defeated and enemy_state == EnemyState.RETURNING:
 		new_prompt = "Enemy returning to spawn"
 	elif not enemy_defeated and dist_to_enemy < ENEMY_AGGRO_RANGE:
-		new_prompt = "Enemy sees you. Use ATTACK or GUARD."
+		new_prompt = "Enemy sees you. Use ATK or GRD."
 	elif enemy_defeated and dist_to_enemy < INTERACT_RANGE:
 		new_prompt = "Enemy defeated. Chest unlocked."
 	elif dist_to_chest < INTERACT_RANGE:
 		if chest_opened:
 			new_prompt = "Chest opened"
 		elif enemy_defeated:
-			new_prompt = "INTERACT: Open unlocked chest"
+			new_prompt = "USE: Open unlocked chest"
 		else:
 			new_prompt = "Chest locked: defeat enemy"
 
@@ -389,25 +416,25 @@ func _on_guard_pressed() -> void:
 	guard_timer = _ability_duration(ABILITY_GUARD)
 	guard_damage_reduction = _ability_guard_reduction(ABILITY_GUARD)
 	player_mesh.material_override = player_guard_material
-	last_ability_message = "%s active: incoming damage reduced." % _ability_name(ABILITY_GUARD)
-	hud.set_last_result(last_ability_message)
+	hud.set_last_result("%s active: incoming damage reduced." % _ability_name(ABILITY_GUARD))
 	_update_status_lines()
+	_update_inventory_tabs()
 
 
 func _on_class_ability_pressed() -> void:
-	if warden_ability_cooldown_timer > 0.0:
-		hud.set_last_result("%s cooldown: %.1fs" % [_ability_name(ABILITY_WARDEN_BULWARK), snapped(warden_ability_cooldown_timer, 0.1)])
+	if class_feature_cooldown_timer > 0.0:
+		hud.set_last_result("%s cooldown: %.1fs" % [_ability_name(ABILITY_CLASS_FEATURE), snapped(class_feature_cooldown_timer, 0.1)])
 		return
 	if player_defeated:
 		hud.set_last_result("You are defeated. Use cyan exit to leave/reset.")
 		return
-	guard_timer = max(guard_timer, _ability_duration(ABILITY_WARDEN_BULWARK))
-	guard_damage_reduction = _ability_guard_reduction(ABILITY_WARDEN_BULWARK)
+	guard_timer = max(guard_timer, _ability_duration(ABILITY_CLASS_FEATURE))
+	guard_damage_reduction = _ability_guard_reduction(ABILITY_CLASS_FEATURE)
 	player_mesh.material_override = player_guard_material
-	warden_ability_cooldown_timer = _ability_cooldown(ABILITY_WARDEN_BULWARK)
-	last_ability_message = "%s: guard up + enemy takes %d." % [_ability_name(ABILITY_WARDEN_BULWARK), _ability_damage(ABILITY_WARDEN_BULWARK)]
-	_try_damage_enemy(_ability_damage(ABILITY_WARDEN_BULWARK), _ability_name(ABILITY_WARDEN_BULWARK))
+	class_feature_cooldown_timer = _ability_cooldown(ABILITY_CLASS_FEATURE)
+	_try_damage_enemy(_ability_damage(ABILITY_CLASS_FEATURE), _ability_name(ABILITY_CLASS_FEATURE))
 	_update_status_lines()
+	_update_inventory_tabs()
 
 
 func _try_damage_enemy(damage: int, source_label: String) -> bool:
@@ -424,6 +451,7 @@ func _try_damage_enemy(damage: int, source_label: String) -> bool:
 		return false
 
 	enemy_hp = max(0, enemy_hp - damage)
+	_update_enemy_health_label()
 	_set_enemy_state(EnemyState.CHASING)
 	hit_flash_timer = HIT_FLASH_SECONDS
 	enemy_mesh.material_override = enemy_hit_material
@@ -437,7 +465,9 @@ func _try_damage_enemy(damage: int, source_label: String) -> bool:
 	else:
 		hud.set_last_result("%s: -%d HP. Enemy HP: %d/%d" % [source_label, damage, enemy_hp, ENEMY_MAX_HP])
 
+	_update_enemy_health_label()
 	_update_status_lines()
+	_update_inventory_tabs()
 	_update_interaction_prompt()
 	return true
 
@@ -459,7 +489,7 @@ func _on_interact_pressed() -> void:
 		if enemy_defeated:
 			hud.set_last_result("Enemy defeated. Chest is unlocked.")
 		else:
-			hud.set_last_result("Enemy blocks the reward. Use ATTACK/HEAVY/WARDEN.")
+			hud.set_last_result("Enemy blocks the reward. Use ATK/HVY/CLS.")
 		return
 
 	if dist_to_chest < INTERACT_RANGE:
@@ -483,22 +513,41 @@ func _on_chest_interact() -> void:
 	chest_mesh.scale = Vector3(1.15, 0.55, 1.0)
 	hud.set_last_result("Chest opened: +1 placeholder reward.")
 	_update_status_lines()
+	_update_inventory_tabs()
 	_update_interaction_prompt()
 
 
 func _update_status_lines() -> void:
-	var player_status := "Player: Defeated" if player_defeated else "Player HP: %d/%d%s" % [player_hp, PLAYER_MAX_HP, " (Guard)" if guard_timer > 0.0 else ""]
 	var enemy_status := "Enemy: Defeated" if enemy_defeated else "Enemy HP: %d/%d (%s)" % [enemy_hp, ENEMY_MAX_HP, _enemy_state_label()]
 	var chest_status := "Chest: Opened" if chest_opened else ("Chest: Unlocked" if enemy_defeated else "Chest: Locked")
-	var ability_status := "Heavy: %s | Warden: %s | Guard: %s" % [_cooldown_label(heavy_attack_cooldown_timer), _cooldown_label(warden_ability_cooldown_timer), _cooldown_label(guard_timer)]
+	var ability_status := "Heavy: %s | Class: %s | Guard: %s" % [_cooldown_label(heavy_attack_cooldown_timer), _cooldown_label(class_feature_cooldown_timer), _cooldown_label(guard_timer)]
 	var enemy_status_line := last_enemy_hit_message if last_enemy_hit_message != "" else "Ability source: %s" % ability_source_label
 	hud.set_inventory_summary(PackedStringArray([
-		player_status,
 		enemy_status,
 		chest_status,
 		ability_status,
 		enemy_status_line,
 	]))
+
+
+func _update_inventory_tabs() -> void:
+	var backpack_lines := PackedStringArray([
+		"torch_kit x1",
+		"weathered_timber x?",
+		"placeholder reward: %s" % ("claimed" if chest_opened else "locked in chest"),
+	])
+	var crafting_lines := PackedStringArray([
+		"No dungeon crafting yet.",
+		"Use test world for torch/foundation prototype crafting.",
+	])
+	var character_lines := PackedStringArray([
+		GameState.get_character_summary(),
+		"HP: %d / %d" % [player_hp, PLAYER_MAX_HP],
+		"Main hand: prototype weapon",
+		"Armor: plain clothes",
+		"Class ability: %s" % _ability_name(ABILITY_CLASS_FEATURE),
+	])
+	hud.set_inventory_tabs(backpack_lines, crafting_lines, character_lines)
 
 
 func _cooldown_label(timer: float) -> String:
