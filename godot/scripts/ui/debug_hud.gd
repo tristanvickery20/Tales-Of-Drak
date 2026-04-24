@@ -31,6 +31,7 @@ var tab_backpack
 var tab_crafting
 var tab_character
 
+var gs = null
 var active_tab = "backpack"
 var selected_item_index = 0
 var selected_recipe_index = 0
@@ -58,6 +59,9 @@ var recipes = [
 ]
 
 func _ready():
+	gs = get_node_or_null("/root/GameState")
+	if gs != null and gs.has_signal("runtime_state_changed"):
+		gs.connect("runtime_state_changed", Callable(self, "_refresh_from_gamestate"))
 	root_margin.offset_top = 88
 	root_margin.offset_right = -105
 	_build_bars()
@@ -66,6 +70,20 @@ func _ready():
 	set_player_health(1, 1)
 	set_progression(1, 0, 100)
 	_update_view()
+	call_deferred("_refresh_from_gamestate")
+
+func _refresh_from_gamestate():
+	if gs == null:
+		gs = get_node_or_null("/root/GameState")
+	if gs == null:
+		return
+	if gs.has_method("ensure_runtime_state"):
+		gs.ensure_runtime_state()
+	set_player_health(gs.current_hp, gs.max_hp)
+	set_progression(gs.level, gs.xp, gs.xp_to_next)
+	set_character_summary(gs.character_name, "%s %s" % [gs.species_name, gs.class_name])
+	if gs.has_method("get_inventory_lines") and gs.has_method("get_character_view_lines"):
+		set_inventory_tabs(gs.get_inventory_lines(), PackedStringArray(), gs.get_character_view_lines())
 
 func _panel_style(bg, border, radius = 8):
 	var s = StyleBoxFlat.new()
@@ -259,6 +277,7 @@ func _tab(text, id):
 	return b
 
 func _toggle_inventory():
+	_refresh_from_gamestate()
 	panel.visible = not panel.visible
 	overlay.visible = panel.visible
 	_update_view()
@@ -390,11 +409,51 @@ func _update_action_buttons():
 		secondary_button.text = "EQUIP"
 
 func _primary_action():
-	if active_tab == "crafting": craft_recipe_requested.emit(recipes[clamp(selected_recipe_index, 0, recipes.size() - 1)])
-	elif active_tab == "backpack" and not backpack_lines.is_empty(): use_item_requested.emit(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
+	if active_tab == "crafting":
+		_craft_direct(recipes[clamp(selected_recipe_index, 0, recipes.size() - 1)])
+	elif active_tab == "backpack" and not backpack_lines.is_empty():
+		_use_direct(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
 
 func _secondary_action():
-	if active_tab == "backpack" and not backpack_lines.is_empty(): equip_item_requested.emit(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
+	if active_tab == "backpack" and not backpack_lines.is_empty():
+		_equip_direct(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
+
+func _craft_direct(recipe):
+	if gs == null:
+		craft_recipe_requested.emit(recipe)
+		return
+	var requirements = recipe.get("requirements", {})
+	for id in requirements.keys():
+		if gs.get_item_count(str(id)) < int(requirements[id]):
+			set_last_result("Missing %s: %d / %d" % [_item_name(str(id)), gs.get_item_count(str(id)), int(requirements[id])])
+			_refresh_from_gamestate()
+			return
+	for id in requirements.keys():
+		gs.remove_item(str(id), int(requirements[id]))
+	var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
+	var output_qty = max(1, int(recipe.get("output_quantity", 1)))
+	gs.add_item(output_id, output_qty)
+	set_last_result("Crafted %s x%d." % [_item_name(output_id), output_qty])
+	call_deferred("_refresh_from_gamestate")
+
+func _use_direct(item_id):
+	if gs == null:
+		use_item_requested.emit(item_id)
+		return
+	if gs.has_method("use_item"):
+		var result = gs.use_item(item_id)
+		set_last_result(str(result.get("message", "Used item.")))
+	call_deferred("_refresh_from_gamestate")
+
+func _equip_direct(item_id):
+	if gs == null:
+		equip_item_requested.emit(item_id)
+		return
+	if gs.has_method("equip_item") and gs.equip_item(item_id):
+		set_last_result("Equipped %s." % _item_name(item_id))
+	else:
+		set_last_result("Cannot equip %s." % _item_name(item_id))
+	call_deferred("_refresh_from_gamestate")
 
 func _item_def(item_id):
 	item_id = str(item_id)
