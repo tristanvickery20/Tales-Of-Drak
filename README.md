@@ -53,12 +53,15 @@ Not included yet:
 - ✅ Stage 8: Movement + Test World Prototype
 - ✅ Stage 8.5: Web Preview Pipeline
 - ✅ Stage 8.6: Browser / Touch Control Layer
+- ✅ Stage 9: Dungeon Shell
 
 Stage 8 introduces a tiny playable graybox test world that wires movement, gathering, crafting, and building into one sandbox scene.
 
 Stage 8.5 adds a GitHub Actions pipeline that validates the design data, exports the Godot test world to Web, and publishes it to GitHub Pages so it can be opened from a phone. See `docs/web-preview.md` for setup, limitations, and the manual GitHub Pages step required to enable it.
 
 Stage 8.6 adds an on-screen control overlay (left thumbstick + right action buttons for Jump / Sprint / Interact / Craft / Place) so the same Stage 8 test world is playable from iPhone Safari. Desktop keyboard controls (WASD / Space / Shift / E / C / B) are unchanged — both input paths feed the same Godot input actions.
+
+Stage 9 adds a graybox dungeon shell that can be entered from the test world. The dungeon has a simple rectangular room, placeholder enemy, reward chest, and exit portal that returns to the test world. Touch controls are preserved in the dungeon.
 
 ## Vision
 

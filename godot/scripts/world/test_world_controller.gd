@@ -1,18 +1,22 @@
 extends Node3D
 
-## Stage 8 Test World Controller
+## Stage 8 Test World Controller (Stage 9: Added dungeon portal)
 ## Initializes framework systems and wires scene interactions.
 ##
 ## In Web Preview, this controller runs a tiny self-contained sandbox session.
 ## That keeps iPhone testing stable even while the full DataRegistry JSON loader
 ## is refined for desktop/local Godot.
+##
+## Stage 9: Added dungeon portal that transitions to the dungeon_shell.tscn scene.
 
 const GATHER_INTERACT_RANGE := 3.0
+const DUNGEON_INTERACT_RANGE := 3.0
 
 @onready var player: ThirdPersonController = $Player
 @onready var gather_node_marker: Node3D = $GatherNode
 @onready var build_spawn_marker: Node3D = $BuildSpawnMarker
 @onready var placed_build_parent: Node3D = $PlacedBuildPieces
+@onready var dungeon_portal: Node3D = $DungeonPortal
 @onready var hud: DebugHud = $DebugHud
 
 var registry: DataRegistry
@@ -127,12 +131,23 @@ func _init_web_preview_session() -> void:
 
 func _update_prompt() -> void:
 	var prompt := "Move: joystick/WASD | Jump | Sprint | Craft | Place"
-	if player.global_position.distance_to(gather_node_marker.global_position) <= GATHER_INTERACT_RANGE:
+	
+	# Check dungeon portal first (priority)
+	if player.global_position.distance_to(dungeon_portal.global_position) <= DUNGEON_INTERACT_RANGE:
+		prompt += " | Interact Enter Dungeon"
+	# Check gathering node
+	elif player.global_position.distance_to(gather_node_marker.global_position) <= GATHER_INTERACT_RANGE:
 		prompt += " | Interact Gather"
+	
 	hud.set_prompt(prompt)
 
 
 func _on_interact_pressed() -> void:
+	# Check dungeon portal first
+	if player.global_position.distance_to(dungeon_portal.global_position) <= DUNGEON_INTERACT_RANGE:
+		_enter_dungeon()
+		return
+
 	if character == null:
 		return
 	if player.global_position.distance_to(gather_node_marker.global_position) > GATHER_INTERACT_RANGE:
@@ -157,6 +172,11 @@ func _on_interact_pressed() -> void:
 	print("[TestWorld] %s" % text)
 	hud.set_last_result(text)
 	_update_hud_inventory()
+
+
+func _enter_dungeon() -> void:
+	print("[TestWorld] Entering dungeon...")
+	get_tree().change_scene_to_file("res://scenes/dungeon/dungeon_shell.tscn")
 
 
 func _on_craft_pressed() -> void:

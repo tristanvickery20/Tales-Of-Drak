@@ -1,0 +1,182 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/dungeon_shell_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://scripts/player/third_person_controller.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://scripts/ui/mobile_controls.gd" id="4_mobile"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(20, 20)
+
+[sub_resource type="BoxShape3D" id="BoxShape_floor"]
+size = Vector3(20, 1, 20)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(20, 4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_north"]
+size = Vector3(20, 4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_south"]
+size = Vector3(20, 4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_east"]
+size = Vector3(0.5, 4, 20)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_west"]
+size = Vector3(0.5, 4, 20)
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy"]
+size = Vector3(1, 1.6, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_enemy"]
+size = Vector3(1, 1.6, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_chest"]
+size = Vector3(0.8, 0.8, 1.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape_chest"]
+size = Vector3(0.8, 0.8, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_exit"]
+size = Vector3(2, 3, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape_exit"]
+size = Vector3(2, 3, 0.3)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_player"]
+radius = 0.45
+height = 1.2
+
+[node name="DungeonShell" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.5, 0, 0.353553, 0.612373, -0.707107, 0.353553, 0.612372, 0.707107, 0, 5, 0)
+light_energy = 1.2
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("PlaneMesh_floor")
+
+[node name="FloorCollision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape_floor")
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="WallNorth" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -10)
+
+[node name="NorthMesh" type="MeshInstance3D" parent="Walls/WallNorth"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="NorthCollision" type="CollisionShape3D" parent="Walls/WallNorth"]
+shape = SubResource("BoxShape_wall_north")
+
+[node name="WallSouth" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 10)
+
+[node name="SouthMesh" type="MeshInstance3D" parent="Walls/WallSouth"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="SouthCollision" type="CollisionShape3D" parent="Walls/WallSouth"]
+shape = SubResource("BoxShape_wall_south")
+
+[node name="WallEast" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2, 0)
+
+[node name="EastMesh" type="MeshInstance3D" parent="Walls/WallEast"]
+mesh = SubResource("BoxMesh_wall")
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0, 0)
+
+[node name="EastCollision" type="CollisionShape3D" parent="Walls/WallEast"]
+shape = SubResource("BoxShape_wall_east")
+
+[node name="WallWest" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2, 0)
+
+[node name="WestMesh" type="MeshInstance3D" parent="Walls/WallWest"]
+mesh = SubResource("BoxMesh_wall")
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0, 0)
+
+[node name="WestCollision" type="CollisionShape3D" parent="Walls/WestCollision"]
+shape = SubResource("BoxShape_wall_west")
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -5)
+
+[node name="EnemyPlaceholder" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.8, 5)
+
+[node name="EnemyMesh" type="MeshInstance3D" parent="EnemyPlaceholder"]
+mesh = SubResource("BoxMesh_enemy")
+modulate = Color(1, 0.3, 0.3, 1)
+
+[node name="EnemyCollision" type="CollisionShape3D" parent="EnemyPlaceholder"]
+shape = SubResource("BoxShape_enemy")
+
+[node name="ChestPlaceholder" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.4, 5)
+
+[node name="ChestMesh" type="MeshInstance3D" parent="ChestPlaceholder"]
+mesh = SubResource("BoxMesh_chest")
+modulate = Color(0.8, 0.7, 0.2, 1)
+
+[node name="ChestCollision" type="CollisionShape3D" parent="ChestPlaceholder"]
+shape = SubResource("BoxShape_chest")
+
+[node name="ExitPortal" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -9)
+
+[node name="ExitMesh" type="MeshInstance3D" parent="ExitPortal"]
+mesh = SubResource("BoxMesh_exit")
+modulate = Color(0.2, 0.8, 1, 0.8)
+
+[node name="ExitCollision" type="CollisionShape3D" parent="ExitPortal"]
+shape = SubResource("BoxShape_exit")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -5)
+script = ExtResource("2_player")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Player"]
+mesh = SubResource("CapsuleMesh_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+shape = SubResource("CapsuleShape_player")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 1.5, 0)
+spring_length = 6.0
+
+[node name="Camera3D" type="Camera3D" parent="Player/SpringArm3D"]
+current = true
+
+[node name="DebugHud" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+
+[node name="MarginContainer" type="MarginContainer" parent="DebugHud"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="DebugHud/MarginContainer"]
+
+[node name="TitleLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Dungeon: (loading)"
+
+[node name="StatusLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Status:"
+
+[node name="PromptLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
+text = "Prompt:"
+
+[node name="MobileControls" type="CanvasLayer" parent="."]
+script = ExtResource("4_mobile")
