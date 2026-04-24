@@ -55,6 +55,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Copy design data into Godot project for export
+        run: |
+          rm -rf godot/design
+          cp -R design godot/design
+
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
