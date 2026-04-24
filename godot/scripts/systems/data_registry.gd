@@ -39,6 +39,14 @@ var _loaded_files: PackedStringArray = []
 func load_all_design_data() -> bool:
 	clear()
 
+	# Stage 8.6 web preview safety path:
+	# GitHub Pages + Godot Web has been unreliable with loose JSON/resource-pack
+	# reads on iPhone Safari. For the browser preview, load the minimum sandbox
+	# dataset directly so touch testing is not blocked by export packaging.
+	if OS.has_feature("web"):
+		push_warning("[DataRegistry] Web build detected. Loading minimum Stage 8 sandbox fallback data.")
+		return _load_minimum_sandbox_data()
+
 	if _load_embedded_design_data():
 		print("[DataRegistry] Loaded %d embedded design files" % _loaded_files.size())
 		return true
