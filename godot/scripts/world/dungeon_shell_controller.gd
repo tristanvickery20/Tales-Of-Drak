@@ -124,13 +124,13 @@ func _build_enemy_hp_label():
 		return
 	enemy_hp_label = Label3D.new()
 	enemy_hp_label.name = "EnemyHealthLabel"
-	enemy_hp_label.position = Vector3(0, 1.85, 0)
-	enemy_hp_label.font_size = 96
-	enemy_hp_label.pixel_size = 0.012
+	enemy_hp_label.position = Vector3(0, 1.45, 0)
+	enemy_hp_label.font_size = 36
+	enemy_hp_label.pixel_size = 0.004
 	enemy_hp_label.modulate = Color(1, 0.06, 0.06, 1)
 	enemy_hp_label.outline_modulate = Color(0, 0, 0, 1)
-	enemy_hp_label.outline_size = 16
-	enemy_hp_label.fixed_size = true
+	enemy_hp_label.outline_size = 8
+	enemy_hp_label.fixed_size = false
 	enemy_hp_label.no_depth_test = true
 	enemy_hp_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	enemy_node.add_child(enemy_hp_label)
