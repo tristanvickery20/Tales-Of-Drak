@@ -2,6 +2,10 @@ extends Node3D
 
 ## Stage 8 Test World Controller
 ## Initializes framework systems and wires scene interactions.
+##
+## In Web Preview, this controller runs a tiny self-contained sandbox session.
+## That keeps iPhone testing stable even while the full DataRegistry JSON loader
+## is refined for desktop/local Godot.
 
 const GATHER_INTERACT_RANGE := 3.0
 
@@ -20,6 +24,9 @@ var crafting_system: CraftingSystem
 var building_system: BuildingSystem
 var gathering_node: GatheringNode
 
+var web_preview_mode: bool = false
+var web_inventory: Dictionary = {}
+
 
 func _ready() -> void:
 	_init_session()
@@ -29,10 +36,6 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_update_prompt()
 
-	## Stage 8.6: actions are routed through the InputMap, so both the
-	## keyboard (E / C / B mapped in project.godot) and the on-screen
-	## mobile buttons (which call Input.action_press) trigger the same
-	## handler. is_action_just_pressed avoids retriggering every frame.
 	if Input.is_action_just_pressed("interact"):
 		_on_interact_pressed()
 	if Input.is_action_just_pressed("craft"):
@@ -42,20 +45,15 @@ func _process(_delta: float) -> void:
 
 
 func _init_session() -> void:
+	if OS.has_feature("web"):
+		_init_web_preview_session()
+		return
+
 	registry = DataRegistry.new()
 	var load_ok := registry.load_all_design_data()
-
-	# Last-resort Stage 8.6 web-preview guard. The scene should not be blocked
-	# by exported JSON/embedded data issues. If normal registry loading fails,
-	# force the minimum sandbox dataset directly and keep the preview playable.
 	if not load_ok:
-		push_warning("[TestWorld] DataRegistry normal load failed; forcing minimum sandbox fallback data.")
-		if registry.has_method("_load_minimum_sandbox_data"):
-			load_ok = registry.call("_load_minimum_sandbox_data")
-
-	if not load_ok:
-		hud.set_last_result("DataRegistry failed even after fallback.")
-		push_error("[TestWorld] DataRegistry init failed after fallback")
+		hud.set_last_result("DataRegistry failed to load.")
+		push_error("[TestWorld] DataRegistry init failed")
 		return
 
 	var factory := CharacterFactory.new()
@@ -90,10 +88,47 @@ func _init_session() -> void:
 	print("[TestWorld] Game session initialized.")
 
 
+func _init_web_preview_session() -> void:
+	web_preview_mode = true
+
+	character = PlayerCharacter.new()
+	character.character_id = "web_sandbox_runner"
+	character.display_name = "Sandbox Runner"
+	character.species_id = "human"
+	character.class_id = "warden"
+	character.subclass_id = "ashen_guard"
+	character.level = 1
+	character.xp = 0
+	character.ability_scores = {
+		"strength": 11,
+		"dexterity": 10,
+		"constitution": 12,
+		"intelligence": 10,
+		"wisdom": 11,
+		"charisma": 10,
+	}
+	character.derived_stats = {
+		"max_health": 11,
+		"armor_class": 10,
+		"initiative": 0,
+		"movement_speed": 30,
+	}
+
+	web_inventory = {
+		"starter_hatchet": 1,
+		"weathered_timber": 10,
+		"torch_kit": 1,
+	}
+
+	hud.set_character_summary(character.display_name, character.class_id)
+	hud.set_last_result("Web sandbox session initialized.")
+	print("[TestWorld] Web sandbox session initialized.")
+
+
 func _update_prompt() -> void:
-	var prompt := "Move: WASD | Jump: Space | Sprint: Shift | Craft: C | Place: B"
+	var prompt := "Move: joystick/WASD | Jump | Sprint | Craft | Place"
 	if player.global_position.distance_to(gather_node_marker.global_position) <= GATHER_INTERACT_RANGE:
-		prompt += " | Interact Gather: E"
+		prompt += " | Interact Gather"
 	hud.set_prompt(prompt)
 
 
@@ -102,6 +137,12 @@ func _on_interact_pressed() -> void:
 		return
 	if player.global_position.distance_to(gather_node_marker.global_position) > GATHER_INTERACT_RANGE:
 		hud.set_last_result("Too far from gathering node.")
+		return
+
+	if web_preview_mode:
+		_add_web_item("weathered_timber", 3)
+		hud.set_last_result("Gathered weathered_timber x3")
+		_update_hud_inventory()
 		return
 
 	if gathering_node.is_depleted:
@@ -121,6 +162,17 @@ func _on_interact_pressed() -> void:
 func _on_craft_pressed() -> void:
 	if character == null:
 		return
+
+	if web_preview_mode:
+		if _get_web_item_count("weathered_timber") < 1:
+			hud.set_last_result("Craft failed: need weathered_timber x1")
+			return
+		_remove_web_item("weathered_timber", 1)
+		_add_web_item("torch_kit", 2)
+		hud.set_last_result("Crafted torch_kit")
+		_update_hud_inventory()
+		return
+
 	var result := crafting_system.craft("craft_torch_kit", inventory)
 	var text := "Craft failed"
 	if result.get("ok", false):
@@ -135,10 +187,21 @@ func _on_craft_pressed() -> void:
 func _on_place_pressed() -> void:
 	if character == null:
 		return
+
+	if web_preview_mode:
+		if _get_web_item_count("weathered_timber") < 8:
+			hud.set_last_result("Build failed: need weathered_timber x8")
+			return
+		_remove_web_item("weathered_timber", 8)
+		_spawn_build_placeholder(build_spawn_marker.global_position)
+		hud.set_last_result("Placed timber_foundation")
+		_update_hud_inventory()
+		return
+
 	var pos := {
 		"x": build_spawn_marker.global_position.x,
 		"y": build_spawn_marker.global_position.y,
-		"z": build_spawn_marker.global_position.z
+		"z": build_spawn_marker.global_position.z,
 	}
 	var rot := {"x": 0.0, "y": 0.0, "z": 0.0}
 	var result := building_system.place_piece("timber_foundation", inventory, pos, rot)
@@ -162,9 +225,27 @@ func _spawn_build_placeholder(world_pos: Vector3) -> void:
 
 
 func _update_hud_inventory() -> void:
+	var lines: PackedStringArray = []
+	if web_preview_mode:
+		for item_id in web_inventory.keys():
+			lines.append("%s x%d" % [item_id, int(web_inventory[item_id])])
+		hud.set_inventory_summary(lines)
+		return
+
 	if inventory == null:
 		return
-	var lines: PackedStringArray = []
 	for stack in inventory.get_all_items():
 		lines.append("%s x%d" % [stack.get("item_id", "?"), int(stack.get("quantity", 0))])
 	hud.set_inventory_summary(lines)
+
+
+func _get_web_item_count(item_id: String) -> int:
+	return int(web_inventory.get(item_id, 0))
+
+
+func _add_web_item(item_id: String, quantity: int) -> void:
+	web_inventory[item_id] = _get_web_item_count(item_id) + quantity
+
+
+func _remove_web_item(item_id: String, quantity: int) -> void:
+	web_inventory[item_id] = max(0, _get_web_item_count(item_id) - quantity)
