@@ -11,6 +11,7 @@ class_name DataRegistry
 const REQUIRED_TOP_LEVEL_KEYS := ["schema_version", "record_type", "records"]
 const DESIGN_DIR_EXPORT := "res://design"
 const DESIGN_DIR_LOCAL := "res://../design"
+const EMBEDDED_DATA_SCRIPT := "res://scripts/generated/design_data_embedded.gd"
 const DESIGN_FILE_NAMES := PackedStringArray([
 	"armor.json",
 	"build_pieces.json",
@@ -98,10 +99,15 @@ func get_loaded_files() -> PackedStringArray:
 
 
 func _load_embedded_design_data() -> bool:
-	if not ClassDB.class_exists("DesignDataEmbedded"):
+	var embedded_script: Resource = load(EMBEDDED_DATA_SCRIPT)
+	if embedded_script == null:
 		return false
 
-	var embedded_files: Dictionary = DesignDataEmbedded.FILES
+	var embedded_instance: Variant = embedded_script.new()
+	if embedded_instance == null:
+		return false
+
+	var embedded_files: Dictionary = embedded_instance.FILES
 	if embedded_files.is_empty():
 		return false
 
