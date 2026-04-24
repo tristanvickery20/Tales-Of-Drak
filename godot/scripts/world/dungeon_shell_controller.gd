@@ -1,26 +1,21 @@
 extends Node3D
 
-## Stage 12 Basic Ability Bar
+## Stage 13 Data-Driven Combat Abilities
 ##
-## First step toward class-style RPG combat:
-## - ATTACK = basic attack
-## - HEAVY = stronger hit with cooldown
-## - GUARD = short defensive stance that reduces touch damage
-## - WARDEN = placeholder class ability that damages enemy and briefly guards
-## - HUD shows cooldowns and guard state
+## Same playable loop as Stage 12, but core ability values now come from
+## design/abilities.json when available:
+## - basic_attack
+## - heavy_attack
+## - guard
+## - warden_bulwark
+##
+## Safe fallbacks are kept so local/web preview stays playable even if design
+## loading fails.
 
 const INTERACT_RANGE := 2.8
 const ATTACK_RANGE := 3.0
 const ENEMY_MAX_HP := 30
 const PLAYER_MAX_HP := 50
-const BASIC_ATTACK_DAMAGE := 10
-const HEAVY_ATTACK_DAMAGE := 18
-const WARDEN_ABILITY_DAMAGE := 8
-const GUARD_DAMAGE_REDUCTION := 0.5
-const GUARD_DURATION := 2.0
-const WARDEN_GUARD_DURATION := 1.5
-const HEAVY_ATTACK_COOLDOWN := 3.0
-const WARDEN_ABILITY_COOLDOWN := 6.0
 const ENEMY_AGGRO_RANGE := 8.0
 const ENEMY_LEASH_RANGE := 11.0
 const ENEMY_STOP_RANGE := 1.55
@@ -31,6 +26,42 @@ const ENEMY_TOUCH_DAMAGE := 5
 const ENEMY_DAMAGE_COOLDOWN := 1.4
 const HIT_FLASH_SECONDS := 0.18
 const DAMAGE_FLASH_SECONDS := 0.22
+
+const ABILITY_BASIC_ATTACK := "basic_attack"
+const ABILITY_HEAVY_ATTACK := "heavy_attack"
+const ABILITY_GUARD := "guard"
+const ABILITY_WARDEN_BULWARK := "warden_bulwark"
+
+const FALLBACK_ABILITIES := {
+	ABILITY_BASIC_ATTACK: {
+		"display_name": "Basic Attack",
+		"damage": 10,
+		"cooldown_seconds": 0.0,
+		"duration_seconds": 0.0,
+		"guard_damage_reduction": 0.0,
+	},
+	ABILITY_HEAVY_ATTACK: {
+		"display_name": "Heavy Attack",
+		"damage": 18,
+		"cooldown_seconds": 3.0,
+		"duration_seconds": 0.0,
+		"guard_damage_reduction": 0.0,
+	},
+	ABILITY_GUARD: {
+		"display_name": "Guard",
+		"damage": 0,
+		"cooldown_seconds": 0.0,
+		"duration_seconds": 2.0,
+		"guard_damage_reduction": 0.5,
+	},
+	ABILITY_WARDEN_BULWARK: {
+		"display_name": "Warden Bulwark",
+		"damage": 8,
+		"cooldown_seconds": 6.0,
+		"duration_seconds": 1.5,
+		"guard_damage_reduction": 0.5,
+	},
+}
 
 enum EnemyState { IDLE, CHASING, RETURNING, DEFEATED }
 
@@ -55,10 +86,13 @@ var enemy_damage_cooldown_timer: float = 0.0
 var heavy_attack_cooldown_timer: float = 0.0
 var warden_ability_cooldown_timer: float = 0.0
 var guard_timer: float = 0.0
+var guard_damage_reduction: float = 0.5
 var enemy_state: EnemyState = EnemyState.IDLE
 var enemy_spawn_position: Vector3 = Vector3.ZERO
 var last_enemy_hit_message: String = ""
 var last_ability_message: String = "Abilities ready: Attack / Heavy / Guard / Warden"
+var ability_records: Dictionary = {}
+var ability_source_label: String = "fallback"
 
 var enemy_default_material: StandardMaterial3D
 var enemy_hit_material: StandardMaterial3D
@@ -73,11 +107,12 @@ var player_guard_material: StandardMaterial3D
 func _ready() -> void:
 	print("[DungeonShell] Dungeon initialized.")
 	enemy_spawn_position = enemy_placeholder.global_position
+	_load_ability_data()
 	_setup_feedback_materials()
-	hud.set_character_summary("Dungeon Shell", "Stage 12")
+	hud.set_character_summary("Dungeon Shell", "Stage 13")
 	_update_status_lines()
 	hud.set_prompt("ATTACK | HEAVY | GUARD | WARDEN")
-	hud.set_last_result("Stage 12: test the basic ability bar.")
+	hud.set_last_result("Stage 13: abilities loaded from %s." % ability_source_label)
 
 
 func _process(delta: float) -> void:
@@ -95,6 +130,78 @@ func _process(delta: float) -> void:
 		_on_class_ability_pressed()
 	if Input.is_action_just_pressed("interact"):
 		_on_interact_pressed()
+
+
+func _load_ability_data() -> void:
+	ability_records.clear()
+	for ability_id in FALLBACK_ABILITIES.keys():
+		ability_records[ability_id] = FALLBACK_ABILITIES[ability_id].duplicate(true)
+	ability_source_label = "fallback"
+
+	var raw_json := _get_abilities_json_text()
+	if raw_json.is_empty():
+		print("[DungeonShell] abilities.json not found; using fallback ability values.")
+		return
+
+	var parsed: Variant = JSON.parse_string(raw_json)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_warning("[DungeonShell] abilities.json invalid; using fallback ability values.")
+		return
+
+	var root: Dictionary = parsed
+	if root.get("record_type", "") != "ability" or typeof(root.get("records", [])) != TYPE_ARRAY:
+		push_warning("[DungeonShell] abilities.json has wrong contract; using fallback ability values.")
+		return
+
+	for entry in root["records"]:
+		if typeof(entry) != TYPE_DICTIONARY:
+			continue
+		var record: Dictionary = entry
+		var ability_id := str(record.get("id", ""))
+		if ability_id.is_empty():
+			continue
+		ability_records[ability_id] = record.duplicate(true)
+
+	ability_source_label = "design/abilities.json"
+	print("[DungeonShell] Loaded %d ability records from %s" % [ability_records.size(), ability_source_label])
+
+
+func _get_abilities_json_text() -> String:
+	if DesignDataEmbedded.FILES.has("abilities.json"):
+		return str(DesignDataEmbedded.FILES["abilities.json"])
+
+	for path in ["res://design/abilities.json", "res://../design/abilities.json"]:
+		if FileAccess.file_exists(path):
+			var file := FileAccess.open(path, FileAccess.READ)
+			if file != null:
+				var text := file.get_as_text()
+				file.close()
+				return text
+	return ""
+
+
+func _ability_record(ability_id: String) -> Dictionary:
+	return ability_records.get(ability_id, FALLBACK_ABILITIES.get(ability_id, {}))
+
+
+func _ability_name(ability_id: String) -> String:
+	return str(_ability_record(ability_id).get("display_name", ability_id))
+
+
+func _ability_damage(ability_id: String) -> int:
+	return int(round(float(_ability_record(ability_id).get("damage", 0))))
+
+
+func _ability_cooldown(ability_id: String) -> float:
+	return float(_ability_record(ability_id).get("cooldown_seconds", 0.0))
+
+
+func _ability_duration(ability_id: String) -> float:
+	return float(_ability_record(ability_id).get("duration_seconds", 0.0))
+
+
+func _ability_guard_reduction(ability_id: String) -> float:
+	return clamp(float(_ability_record(ability_id).get("guard_damage_reduction", 0.0)), 0.0, 1.0)
 
 
 func _setup_feedback_materials() -> void:
@@ -213,7 +320,7 @@ func _try_enemy_touch_damage() -> void:
 	enemy_damage_cooldown_timer = ENEMY_DAMAGE_COOLDOWN
 	var damage := ENEMY_TOUCH_DAMAGE
 	if guard_timer > 0.0:
-		damage = max(1, int(round(float(ENEMY_TOUCH_DAMAGE) * GUARD_DAMAGE_REDUCTION)))
+		damage = max(1, int(round(float(ENEMY_TOUCH_DAMAGE) * guard_damage_reduction)))
 		last_enemy_hit_message = "Guard reduced enemy hit: -%d HP" % damage
 	else:
 		last_enemy_hit_message = "Enemy hit you: -%d HP" % damage
@@ -264,40 +371,42 @@ func _update_interaction_prompt() -> void:
 
 
 func _on_attack_pressed() -> void:
-	_try_damage_enemy(BASIC_ATTACK_DAMAGE, "Basic attack")
+	_try_damage_enemy(_ability_damage(ABILITY_BASIC_ATTACK), _ability_name(ABILITY_BASIC_ATTACK))
 
 
 func _on_heavy_attack_pressed() -> void:
 	if heavy_attack_cooldown_timer > 0.0:
-		hud.set_last_result("Heavy cooldown: %.1fs" % snapped(heavy_attack_cooldown_timer, 0.1))
+		hud.set_last_result("%s cooldown: %.1fs" % [_ability_name(ABILITY_HEAVY_ATTACK), snapped(heavy_attack_cooldown_timer, 0.1)])
 		return
-	if _try_damage_enemy(HEAVY_ATTACK_DAMAGE, "Heavy attack"):
-		heavy_attack_cooldown_timer = HEAVY_ATTACK_COOLDOWN
+	if _try_damage_enemy(_ability_damage(ABILITY_HEAVY_ATTACK), _ability_name(ABILITY_HEAVY_ATTACK)):
+		heavy_attack_cooldown_timer = _ability_cooldown(ABILITY_HEAVY_ATTACK)
 
 
 func _on_guard_pressed() -> void:
 	if player_defeated:
 		hud.set_last_result("You are defeated. Use cyan exit to leave/reset.")
 		return
-	guard_timer = GUARD_DURATION
+	guard_timer = _ability_duration(ABILITY_GUARD)
+	guard_damage_reduction = _ability_guard_reduction(ABILITY_GUARD)
 	player_mesh.material_override = player_guard_material
-	last_ability_message = "Guard active: incoming damage reduced."
+	last_ability_message = "%s active: incoming damage reduced." % _ability_name(ABILITY_GUARD)
 	hud.set_last_result(last_ability_message)
 	_update_status_lines()
 
 
 func _on_class_ability_pressed() -> void:
 	if warden_ability_cooldown_timer > 0.0:
-		hud.set_last_result("Warden cooldown: %.1fs" % snapped(warden_ability_cooldown_timer, 0.1))
+		hud.set_last_result("%s cooldown: %.1fs" % [_ability_name(ABILITY_WARDEN_BULWARK), snapped(warden_ability_cooldown_timer, 0.1)])
 		return
 	if player_defeated:
 		hud.set_last_result("You are defeated. Use cyan exit to leave/reset.")
 		return
-	guard_timer = max(guard_timer, WARDEN_GUARD_DURATION)
+	guard_timer = max(guard_timer, _ability_duration(ABILITY_WARDEN_BULWARK))
+	guard_damage_reduction = _ability_guard_reduction(ABILITY_WARDEN_BULWARK)
 	player_mesh.material_override = player_guard_material
-	warden_ability_cooldown_timer = WARDEN_ABILITY_COOLDOWN
-	last_ability_message = "Warden Bulwark: guard up + enemy takes %d." % WARDEN_ABILITY_DAMAGE
-	_try_damage_enemy(WARDEN_ABILITY_DAMAGE, "Warden Bulwark")
+	warden_ability_cooldown_timer = _ability_cooldown(ABILITY_WARDEN_BULWARK)
+	last_ability_message = "%s: guard up + enemy takes %d." % [_ability_name(ABILITY_WARDEN_BULWARK), _ability_damage(ABILITY_WARDEN_BULWARK)]
+	_try_damage_enemy(_ability_damage(ABILITY_WARDEN_BULWARK), _ability_name(ABILITY_WARDEN_BULWARK))
 	_update_status_lines()
 
 
@@ -382,7 +491,7 @@ func _update_status_lines() -> void:
 	var enemy_status := "Enemy: Defeated" if enemy_defeated else "Enemy HP: %d/%d (%s)" % [enemy_hp, ENEMY_MAX_HP, _enemy_state_label()]
 	var chest_status := "Chest: Opened" if chest_opened else ("Chest: Unlocked" if enemy_defeated else "Chest: Locked")
 	var ability_status := "Heavy: %s | Warden: %s | Guard: %s" % [_cooldown_label(heavy_attack_cooldown_timer), _cooldown_label(warden_ability_cooldown_timer), _cooldown_label(guard_timer)]
-	var enemy_status_line := last_enemy_hit_message if last_enemy_hit_message != "" else "Enemy damage cooldown shown after contact"
+	var enemy_status_line := last_enemy_hit_message if last_enemy_hit_message != "" else "Ability source: %s" % ability_source_label
 	hud.set_inventory_summary(PackedStringArray([
 		player_status,
 		enemy_status,
