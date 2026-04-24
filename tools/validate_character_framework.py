@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Framework Prototype v0.1 validator (Stages 4-8)."""
+"""Framework Prototype v0.1 validator (Stages 4-13)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DESIGN = ROOT / "design"
 
 EXPECTED_RECORD_TYPES = {
+    "abilities.json": "ability",
     "armor.json": "armor",
     "build_pieces.json": "build_piece",
     "classes.json": "class",
@@ -28,6 +29,8 @@ EXPECTED_RECORD_TYPES = {
 }
 
 REQUIRED_ABILITIES = {"strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"}
+REQUIRED_COMBAT_ABILITIES = {"basic_attack", "heavy_attack", "guard", "warden_bulwark"}
+VALID_ABILITY_TYPES = {"damage", "guard", "damage_guard"}
 VALID_EQUIPMENT_SLOTS = {"head", "chest", "legs", "feet", "main_hand", "off_hand", "ring", "amulet", "two_hand"}
 VALID_BUILD_CATEGORIES = {"foundation", "wall", "structure", "roof", "utility", "furniture", "comfort"}
 VALID_PLACEMENT_TYPES = {"ground_snap", "vertical_snap", "roof_snap", "wall_snap", "ground_place"}
@@ -67,6 +70,10 @@ def check_equipment_bonus_shape(record: dict, key: str = "equipment_bonuses") ->
     return errors
 
 
+def is_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def main() -> int:
     errors: list[str] = []
     parsed: dict[str, dict] = {}
@@ -89,7 +96,6 @@ def main() -> int:
         if not isinstance(root.get("records"), list):
             errors.append(f"{fname}: records must be an array")
 
-
     # Stage 8 lightweight file checks.
     required_files = [
         ROOT / "godot/scenes/test_world/test_world.tscn",
@@ -104,34 +110,35 @@ def main() -> int:
     # Stage 8.6 — Browser / Touch Control Layer checks.
     mobile_controls = ROOT / "godot/scripts/ui/mobile_controls.gd"
     test_world_scene = ROOT / "godot/scenes/test_world/test_world.tscn"
+    dungeon_scene = ROOT / "godot/scenes/dungeon/dungeon_shell.tscn"
     project_godot = ROOT / "godot/project.godot"
 
     if not mobile_controls.exists():
         errors.append("missing required Stage 8.6 file: godot/scripts/ui/mobile_controls.gd")
 
-    if test_world_scene.exists():
-        scene_text = test_world_scene.read_text()
-        if "scripts/ui/mobile_controls.gd" not in scene_text:
-            errors.append(
-                "Stage 8.6: godot/scenes/test_world/test_world.tscn does not "
-                "reference scripts/ui/mobile_controls.gd"
-            )
-        if 'name="MobileControls"' not in scene_text:
-            errors.append(
-                "Stage 8.6: test_world.tscn is missing the MobileControls "
-                "CanvasLayer node"
-            )
+    for scene_path in (test_world_scene, dungeon_scene):
+        if scene_path.exists():
+            scene_text = scene_path.read_text()
+            if "scripts/ui/mobile_controls.gd" not in scene_text:
+                errors.append(
+                    f"Stage 8.6: {scene_path.relative_to(ROOT)} does not reference scripts/ui/mobile_controls.gd"
+                )
+            if 'name="MobileControls"' not in scene_text:
+                errors.append(
+                    f"Stage 8.6: {scene_path.relative_to(ROOT)} is missing the MobileControls CanvasLayer node"
+                )
 
     if project_godot.exists():
         project_text = project_godot.read_text()
         required_actions = [
             "move_forward", "move_back", "move_left", "move_right",
             "jump", "sprint", "interact", "craft", "place_build",
+            "attack", "heavy_attack", "guard", "class_ability",
         ]
         for action in required_actions:
             if f"\n{action}=" not in project_text:
                 errors.append(
-                    f"Stage 8.6: project.godot is missing input action '{action}'"
+                    f"project.godot is missing input action '{action}'"
                 )
 
     if errors:
@@ -149,9 +156,40 @@ def main() -> int:
     gathering_nodes = parsed["gathering_nodes.json"]["records"]
     recipes = parsed["crafting_recipes.json"]["records"]
     build_pieces = parsed["build_pieces.json"]["records"]
+    abilities = parsed["abilities.json"]["records"]
 
     class_ids = {c.get("id") for c in classes}
+    subclass_ids = {s.get("id") for s in subclasses}
     item_ids = {i.get("id") for i in items}
+
+    for ability in abilities:
+        aid = ability.get("id", "")
+        if not SNAKE_CASE_RE.match(aid):
+            errors.append(f"ability {aid}: id must be snake_case")
+        if ability.get("ability_type") not in VALID_ABILITY_TYPES:
+            errors.append(f"ability {aid}: invalid ability_type '{ability.get('ability_type')}'")
+        for key in ("damage", "cooldown_seconds", "duration_seconds", "guard_damage_reduction"):
+            if not is_number(ability.get(key, 0)):
+                errors.append(f"ability {aid}: {key} must be numeric")
+        if ability.get("damage", 0) < 0:
+            errors.append(f"ability {aid}: damage must be >= 0")
+        if ability.get("cooldown_seconds", 0) < 0:
+            errors.append(f"ability {aid}: cooldown_seconds must be >= 0")
+        if ability.get("duration_seconds", 0) < 0:
+            errors.append(f"ability {aid}: duration_seconds must be >= 0")
+        reduction = ability.get("guard_damage_reduction", 0)
+        if is_number(reduction) and not 0 <= reduction <= 1:
+            errors.append(f"ability {aid}: guard_damage_reduction must be between 0 and 1")
+        class_id = ability.get("class_id", "")
+        subclass_id = ability.get("subclass_id", "")
+        if class_id and class_id not in class_ids:
+            errors.append(f"ability {aid}: class_id '{class_id}' not found in classes.json")
+        if subclass_id and subclass_id not in subclass_ids:
+            errors.append(f"ability {aid}: subclass_id '{subclass_id}' not found in subclasses.json")
+    ability_ids = {a.get("id") for a in abilities}
+    missing_abilities = REQUIRED_COMBAT_ABILITIES - ability_ids
+    if missing_abilities:
+        errors.append(f"abilities.json missing required combat abilities: {sorted(missing_abilities)}")
 
     for r in classes:
         errors.extend(check_bonus_map(r, "starter_ability_bonuses"))
@@ -238,7 +276,7 @@ def main() -> int:
             print(f"- {e}")
         return 1
 
-    print("Validation passed: Stage 4 + Stage 5 + Stage 6 + Stage 7 + Stage 8 data checks are consistent.")
+    print("Validation passed: Stage 4 through Stage 13 data checks are consistent.")
     return 0
 
 
