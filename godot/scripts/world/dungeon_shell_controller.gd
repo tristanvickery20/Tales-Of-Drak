@@ -1,12 +1,13 @@
 extends Node3D
 
-## Stage 11 Basic Enemy AI
+## Stage 11.1 Enemy AI / Combat Balance Polish
 ##
-## Keeps AI intentionally tiny:
+## Keeps AI intentionally tiny but clearer:
 ## - enemy detects player nearby
-## - enemy moves slowly toward player
+## - enemy moves slowly toward player with capped steps
+## - enemy returns to spawn if player runs away
 ## - enemy deals touch damage on cooldown
-## - HUD shows player HP
+## - HUD shows player HP, enemy state, and cooldown clarity
 ## - player can still defeat enemy and unlock chest
 
 const INTERACT_RANGE := 2.8
@@ -15,12 +16,17 @@ const ENEMY_MAX_HP := 30
 const PLAYER_MAX_HP := 50
 const PLAYER_ATTACK_DAMAGE := 10
 const ENEMY_AGGRO_RANGE := 8.0
-const ENEMY_STOP_RANGE := 1.45
-const ENEMY_MOVE_SPEED := 1.4
+const ENEMY_LEASH_RANGE := 11.0
+const ENEMY_STOP_RANGE := 1.55
+const ENEMY_RETURN_STOP_RANGE := 0.2
+const ENEMY_MOVE_SPEED := 1.2
+const ENEMY_RETURN_SPEED := 1.8
 const ENEMY_TOUCH_DAMAGE := 5
-const ENEMY_DAMAGE_COOLDOWN := 1.2
+const ENEMY_DAMAGE_COOLDOWN := 1.4
 const HIT_FLASH_SECONDS := 0.18
 const DAMAGE_FLASH_SECONDS := 0.22
+
+enum EnemyState { IDLE, CHASING, RETURNING, DEFEATED }
 
 @onready var player: ThirdPersonController = $Player
 @onready var player_mesh: MeshInstance3D = $Player/BodyMesh
@@ -40,6 +46,9 @@ var player_defeated: bool = false
 var hit_flash_timer: float = 0.0
 var player_flash_timer: float = 0.0
 var enemy_damage_cooldown_timer: float = 0.0
+var enemy_state: EnemyState = EnemyState.IDLE
+var enemy_spawn_position: Vector3 = Vector3.ZERO
+var last_enemy_hit_message: String = ""
 
 var enemy_default_material: StandardMaterial3D
 var enemy_hit_material: StandardMaterial3D
@@ -52,11 +61,12 @@ var player_damage_material: StandardMaterial3D
 
 func _ready() -> void:
 	print("[DungeonShell] Dungeon initialized.")
+	enemy_spawn_position = enemy_placeholder.global_position
 	_setup_feedback_materials()
-	hud.set_character_summary("Dungeon Shell", "Stage 11")
+	hud.set_character_summary("Dungeon Shell", "Stage 11.1")
 	_update_status_lines()
 	hud.set_prompt("Move | ATTACK enemy | INTERACT objects")
-	hud.set_last_result("Enemy will chase if you get close. Defeat it to unlock the chest.")
+	hud.set_last_result("Enemy patrols its room. Get close to draw aggro.")
 
 
 func _process(delta: float) -> void:
@@ -108,36 +118,79 @@ func _update_timers(delta: float) -> void:
 
 
 func _update_enemy_ai(delta: float) -> void:
-	if enemy_defeated or player_defeated:
+	if enemy_defeated:
+		enemy_state = EnemyState.DEFEATED
+		return
+	if player_defeated:
+		_set_enemy_state(EnemyState.RETURNING)
+		_move_enemy_toward(enemy_spawn_position, ENEMY_RETURN_SPEED, delta, ENEMY_RETURN_STOP_RANGE)
 		return
 
-	var to_player := player.global_position - enemy_placeholder.global_position
-	to_player.y = 0.0
-	var distance := to_player.length()
+	var distance_to_player := _flat_distance(enemy_placeholder.global_position, player.global_position)
+	var distance_from_spawn := _flat_distance(enemy_placeholder.global_position, enemy_spawn_position)
 
-	if distance > ENEMY_AGGRO_RANGE:
+	if distance_to_player > ENEMY_LEASH_RANGE or distance_from_spawn > ENEMY_LEASH_RANGE:
+		_set_enemy_state(EnemyState.RETURNING)
+	elif distance_to_player <= ENEMY_AGGRO_RANGE and enemy_state != EnemyState.RETURNING:
+		_set_enemy_state(EnemyState.CHASING)
+	elif enemy_state == EnemyState.CHASING and distance_to_player > ENEMY_AGGRO_RANGE:
+		_set_enemy_state(EnemyState.RETURNING)
+
+	match enemy_state:
+		EnemyState.CHASING:
+			if distance_to_player > ENEMY_STOP_RANGE:
+				_move_enemy_toward(player.global_position, ENEMY_MOVE_SPEED, delta, ENEMY_STOP_RANGE)
+			else:
+				_try_enemy_touch_damage()
+		EnemyState.RETURNING:
+			var reached_spawn := _move_enemy_toward(enemy_spawn_position, ENEMY_RETURN_SPEED, delta, ENEMY_RETURN_STOP_RANGE)
+			if reached_spawn:
+				_set_enemy_state(EnemyState.IDLE)
+
+
+func _set_enemy_state(next_state: EnemyState) -> void:
+	if enemy_state == next_state:
 		return
+	enemy_state = next_state
+	_update_status_lines()
 
-	if distance > ENEMY_STOP_RANGE:
-		var direction := to_player.normalized()
-		enemy_placeholder.global_position += direction * ENEMY_MOVE_SPEED * delta
-		return
 
-	_try_enemy_touch_damage()
+func _flat_distance(a: Vector3, b: Vector3) -> float:
+	var delta := b - a
+	delta.y = 0.0
+	return delta.length()
+
+
+func _move_enemy_toward(target: Vector3, speed: float, delta: float, stop_range: float) -> bool:
+	var to_target := target - enemy_placeholder.global_position
+	to_target.y = 0.0
+	var distance := to_target.length()
+	if distance <= stop_range:
+		return true
+
+	var step := min(speed * delta, max(0.0, distance - stop_range))
+	if step <= 0.0:
+		return true
+
+	enemy_placeholder.global_position += to_target.normalized() * step
+	return false
 
 
 func _try_enemy_touch_damage() -> void:
 	if enemy_damage_cooldown_timer > 0.0:
+		var remaining := snapped(enemy_damage_cooldown_timer, 0.1)
+		last_enemy_hit_message = "Enemy attack cooling down: %.1fs" % remaining
 		return
 
 	enemy_damage_cooldown_timer = ENEMY_DAMAGE_COOLDOWN
 	player_hp = max(0, player_hp - ENEMY_TOUCH_DAMAGE)
 	player_flash_timer = DAMAGE_FLASH_SECONDS
 	player_mesh.material_override = player_damage_material
+	last_enemy_hit_message = "Enemy hit you: -%d HP" % ENEMY_TOUCH_DAMAGE
 
 	if player_hp <= 0:
 		player_defeated = true
-		hud.set_last_result("You were defeated. Prototype reset later.")
+		hud.set_last_result("You were defeated. Use the cyan exit to leave/reset.")
 	else:
 		hud.set_last_result("Enemy hit you: -%d HP. Player HP: %d/%d" % [ENEMY_TOUCH_DAMAGE, player_hp, PLAYER_MAX_HP])
 
@@ -152,11 +205,13 @@ func _update_interaction_prompt() -> void:
 	var dist_to_chest := player.global_position.distance_to(chest_placeholder.global_position)
 
 	if player_defeated:
-		new_prompt = "Player defeated. Exit/retry later."
+		new_prompt = "Defeated. INTERACT with cyan exit to reset."
 	elif dist_to_exit < INTERACT_RANGE:
 		new_prompt = "INTERACT: Exit Dungeon"
 	elif not enemy_defeated and dist_to_enemy < ATTACK_RANGE:
 		new_prompt = "ATTACK: Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
+	elif not enemy_defeated and enemy_state == EnemyState.RETURNING:
+		new_prompt = "Enemy returning to spawn"
 	elif not enemy_defeated and dist_to_enemy < ENEMY_AGGRO_RANGE:
 		new_prompt = "Enemy sees you. Move or ATTACK."
 	elif enemy_defeated and dist_to_enemy < INTERACT_RANGE:
@@ -176,7 +231,7 @@ func _update_interaction_prompt() -> void:
 
 func _on_attack_pressed() -> void:
 	if player_defeated:
-		hud.set_last_result("You are defeated. Exit/retry later.")
+		hud.set_last_result("You are defeated. Use cyan exit to leave/reset.")
 		return
 	if enemy_defeated:
 		hud.set_last_result("Enemy already defeated. Open the chest.")
@@ -188,11 +243,13 @@ func _on_attack_pressed() -> void:
 		return
 
 	enemy_hp = max(0, enemy_hp - PLAYER_ATTACK_DAMAGE)
+	_set_enemy_state(EnemyState.CHASING)
 	hit_flash_timer = HIT_FLASH_SECONDS
 	enemy_mesh.material_override = enemy_hit_material
 
 	if enemy_hp <= 0:
 		enemy_defeated = true
+		_set_enemy_state(EnemyState.DEFEATED)
 		enemy_placeholder.visible = false
 		chest_mesh.material_override = chest_unlocked_material
 		hud.set_last_result("Enemy defeated! Chest unlocked.")
@@ -213,7 +270,7 @@ func _on_interact_pressed() -> void:
 		return
 
 	if player_defeated:
-		hud.set_last_result("Player defeated. Use exit portal to leave.")
+		hud.set_last_result("Player defeated. Use cyan exit to leave/reset.")
 		return
 
 	if dist_to_enemy < INTERACT_RANGE:
@@ -249,14 +306,29 @@ func _on_chest_interact() -> void:
 
 func _update_status_lines() -> void:
 	var player_status := "Player: Defeated" if player_defeated else "Player HP: %d/%d" % [player_hp, PLAYER_MAX_HP]
-	var enemy_status := "Enemy: Defeated" if enemy_defeated else "Enemy HP: %d/%d" % [enemy_hp, ENEMY_MAX_HP]
+	var enemy_status := "Enemy: Defeated" if enemy_defeated else "Enemy HP: %d/%d (%s)" % [enemy_hp, ENEMY_MAX_HP, _enemy_state_label()]
 	var chest_status := "Chest: Opened" if chest_opened else ("Chest: Unlocked" if enemy_defeated else "Chest: Locked")
+	var cooldown_status := last_enemy_hit_message if last_enemy_hit_message != "" else "Enemy damage cooldown shown after contact"
 	hud.set_inventory_summary(PackedStringArray([
 		player_status,
 		enemy_status,
 		chest_status,
+		cooldown_status,
 		"Red = Enemy | Gold/Green = Chest | Cyan = Exit",
 	]))
+
+
+func _enemy_state_label() -> String:
+	match enemy_state:
+		EnemyState.IDLE:
+			return "Idle"
+		EnemyState.CHASING:
+			return "Chasing"
+		EnemyState.RETURNING:
+			return "Returning"
+		EnemyState.DEFEATED:
+			return "Defeated"
+	return "Unknown"
 
 
 func _exit_to_test_world() -> void:
