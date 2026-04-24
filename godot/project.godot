@@ -8,3 +8,10 @@ config_version=5
 
 config/name="Tales of Drak"
 config/description="Framework Prototype v0.1 for a dark fantasy co-op RPG foundation."
+run/main_scene="res://scenes/test_world/test_world.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

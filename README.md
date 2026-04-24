@@ -51,8 +51,11 @@ Not included yet:
 - ✅ Stage 6: Gathering + Crafting Framework
 - ✅ Stage 7: Housing + Building Framework
 - ✅ Stage 8: Movement + Test World Prototype
+- 🟡 Stage 8.5: Web Preview Pipeline — *configured, awaiting first successful Actions run*
 
 Stage 8 introduces a tiny playable graybox test world that wires movement, gathering, crafting, and building into one sandbox scene.
+
+Stage 8.5 adds a GitHub Actions pipeline that validates the design data, exports the Godot test world to Web, and publishes it to GitHub Pages so it can be opened from a phone. See `docs/web-preview.md` for setup, limitations, and the manual GitHub Pages step required to enable it.
 
 ## Vision
 

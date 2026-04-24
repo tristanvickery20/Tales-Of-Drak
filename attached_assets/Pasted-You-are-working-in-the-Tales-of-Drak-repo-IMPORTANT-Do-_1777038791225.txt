@@ -1,0 +1,75 @@
+You are working in the Tales of Drak repo.
+
+IMPORTANT:
+Do not rebuild the project from scratch.
+Do not rename the project.
+Do not delete existing systems.
+Do not add combat.
+Do not add multiplayer.
+Do not add new gameplay.
+Do not create a new app outside the existing structure.
+Do not convert this into a web mockup.
+Do not remove Godot files.
+
+Grand plan:
+This is a phone-first, AI-assisted, open-source Godot co-op RPG framework.
+
+Completed stages:
+1. Repo foundation
+2. Data Contract v0.1
+3. Godot Data Loader Shell v0.1
+4. Character + Stats Framework v0.1
+5. Inventory + Equipment Framework v0.1
+6. Gathering + Crafting Framework v0.1
+7. Housing + Building Framework v0.1
+8. Movement + Test World Prototype v0.1
+
+Current objective:
+Create Stage 8.5 — Web Preview Pipeline.
+
+The current playable scene exists here:
+godot/scenes/test_world/test_world.tscn
+
+The goal is to make this Godot project exportable to Web so I can open and test it from my iPhone.
+
+Tasks:
+1. Inspect the repo structure.
+2. Confirm the Godot project is inside /godot.
+3. Confirm the main playable scene exists:
+   godot/scenes/test_world/test_world.tscn
+4. Update godot/project.godot so the main scene is:
+   res://scenes/test_world/test_world.tscn
+5. Add Godot Web export configuration if missing:
+   godot/export_presets.cfg
+6. Add a GitHub Actions workflow:
+   .github/workflows/web-preview.yml
+7. The workflow should:
+   - checkout the repo
+   - run python tools/validate_character_framework.py
+   - validate all design/*.json files parse
+   - export the Godot project to Web if feasible
+   - upload/publish the exported files for GitHub Pages if feasible
+8. Prefer a simple maintained Godot export action or a simple documented headless Godot export approach.
+9. If automatic Godot export cannot be fully guaranteed in Replit, clearly document what is missing and create the closest working partial setup.
+10. Add docs/web-preview.md explaining:
+   - what this pipeline does
+   - how to enable GitHub Pages
+   - where to find the Actions run
+   - where the preview link should appear
+   - known iPhone/browser limitations
+   - how to manually export from Godot later if automation fails
+11. Update README.md stage tracker:
+   - mark Stage 8 complete
+   - add Stage 8.5 Web Preview Pipeline as current/in progress or complete depending on result
+12. Run validation:
+   - python tools/validate_character_framework.py
+   - parse all design/*.json
+13. Do not claim the web preview works unless the export action actually succeeds.
+
+Output required:
+- List every file changed
+- Show whether godot/project.godot main scene is set correctly
+- Show whether export_presets.cfg exists
+- Show the GitHub Actions workflow file path
+- Explain whether web export is fully working or partially configured
+- Tell me the exact next manual step I need to do in GitHub Pages
