@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1.0",
+  "record_type": "ability",
+  "records": [
+    {
+      "id": "basic_attack",
+      "display_name": "Basic Attack",
+      "ability_type": "damage",
+      "damage": 10,
+      "cooldown_seconds": 0.0,
+      "duration_seconds": 0.0,
+      "guard_damage_reduction": 0.0,
+      "class_id": "",
+      "subclass_id": ""
+    },
+    {
+      "id": "heavy_attack",
+      "display_name": "Heavy Attack",
+      "ability_type": "damage",
+      "damage": 18,
+      "cooldown_seconds": 3.0,
+      "duration_seconds": 0.0,
+      "guard_damage_reduction": 0.0,
+      "class_id": "",
+      "subclass_id": ""
+    },
+    {
+      "id": "guard",
+      "display_name": "Guard",
+      "ability_type": "guard",
+      "damage": 0,
+      "cooldown_seconds": 0.0,
+      "duration_seconds": 2.0,
+      "guard_damage_reduction": 0.5,
+      "class_id": "",
+      "subclass_id": ""
+    },
+    {
+      "id": "warden_bulwark",
+      "display_name": "Warden Bulwark",
+      "ability_type": "damage_guard",
+      "damage": 8,
+      "cooldown_seconds": 6.0,
+      "duration_seconds": 1.5,
+      "guard_damage_reduction": 0.5,
+      "class_id": "warden",
+      "subclass_id": "ashen_guard"
+    }
+  ]
+}
