@@ -3,33 +3,29 @@ class_name MobileControls
 
 ## Stage 8.6 — Browser / Touch Control Layer.
 ##
-## Builds a minimal on-screen control overlay (left thumbstick + right action
-## buttons) for the existing test world. Inputs are routed through the same
-## Godot InputMap actions as the keyboard, so all existing systems
-## (ThirdPersonController, gather/craft/place handlers) react identically
-## whether the input came from keys or the touchscreen.
-##
-## The UI is built programmatically so the .tscn stays small and only needs
-## to add this single CanvasLayer node.
+## Builds a minimal on-screen control overlay for iPhone/browser testing.
+## The overlay is intentionally obvious: left joystick + right action panel.
+## Buttons route through the same InputMap actions as keyboard controls.
 
-const MAX_RADIUS: float = 80.0
+const MAX_RADIUS: float = 72.0
 const DEAD_ZONE: float = 0.18
-const BUTTON_SIZE: Vector2 = Vector2(120, 72)
-const BUTTON_GAP: float = 14.0
-const JOYSTICK_SIZE: Vector2 = Vector2(200, 200)
-const KNOB_SIZE: Vector2 = Vector2(80, 80)
-const SCREEN_MARGIN: float = 32.0
-const BUTTON_FONT_SIZE: int = 22
+const BUTTON_SIZE: Vector2 = Vector2(132, 58)
+const BUTTON_GAP: float = 10.0
+const JOYSTICK_SIZE: Vector2 = Vector2(180, 180)
+const KNOB_SIZE: Vector2 = Vector2(72, 72)
+const SAFE_MARGIN: float = 28.0
+const BOTTOM_SAFE_MARGIN: float = 132.0
+const BUTTON_FONT_SIZE: int = 20
 
 const MOVE_ACTIONS: Array[StringName] = [
 	&"move_forward", &"move_back", &"move_left", &"move_right"
 ]
 const ACTION_BUTTONS: Array = [
-	["Jump",     &"jump"],
-	["Sprint",   &"sprint"],
-	["Interact", &"interact"],
-	["Craft",    &"craft"],
-	["Place",    &"place_build"],
+	["JUMP",     &"jump"],
+	["SPRINT",   &"sprint"],
+	["INTERACT", &"interact"],
+	["CRAFT",    &"craft"],
+	["PLACE",    &"place_build"],
 ]
 
 var _joystick_base: Panel
@@ -38,7 +34,7 @@ var _dragging: bool = false
 
 
 func _ready() -> void:
-	layer = 5
+	layer = 20
 	_build_joystick()
 	_build_action_buttons()
 
@@ -48,16 +44,22 @@ func _build_joystick() -> void:
 	_joystick_base.name = "JoystickBase"
 	_joystick_base.custom_minimum_size = JOYSTICK_SIZE
 	_joystick_base.size = JOYSTICK_SIZE
-	_joystick_base.modulate = Color(1.0, 1.0, 1.0, 0.55)
-	_joystick_base.set_anchors_preset(Control.PRESET_BOTTOM_LEFT, true)
-	_joystick_base.position = Vector2(SCREEN_MARGIN, -JOYSTICK_SIZE.y - SCREEN_MARGIN)
+	_joystick_base.modulate = Color(1.0, 1.0, 1.0, 0.58)
+	_joystick_base.anchor_left = 0.0
+	_joystick_base.anchor_top = 1.0
+	_joystick_base.anchor_right = 0.0
+	_joystick_base.anchor_bottom = 1.0
+	_joystick_base.offset_left = SAFE_MARGIN
+	_joystick_base.offset_top = -JOYSTICK_SIZE.y - BOTTOM_SAFE_MARGIN
+	_joystick_base.offset_right = SAFE_MARGIN + JOYSTICK_SIZE.x
+	_joystick_base.offset_bottom = -BOTTOM_SAFE_MARGIN
 	add_child(_joystick_base)
 
 	_joystick_knob = Panel.new()
 	_joystick_knob.name = "JoystickKnob"
 	_joystick_knob.custom_minimum_size = KNOB_SIZE
 	_joystick_knob.size = KNOB_SIZE
-	_joystick_knob.modulate = Color(1.0, 1.0, 1.0, 0.85)
+	_joystick_knob.modulate = Color(1.0, 1.0, 1.0, 0.9)
 	_joystick_knob.position = JOYSTICK_SIZE * 0.5 - KNOB_SIZE * 0.5
 	_joystick_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_joystick_base.add_child(_joystick_knob)
@@ -69,12 +71,20 @@ func _build_action_buttons() -> void:
 	var stack := VBoxContainer.new()
 	stack.name = "ActionButtons"
 	stack.add_theme_constant_override("separation", int(BUTTON_GAP))
+	stack.modulate = Color(1.0, 1.0, 1.0, 0.96)
 	add_child(stack)
 
-	var total_h: float = (BUTTON_SIZE.y + BUTTON_GAP) * float(ACTION_BUTTONS.size())
-	stack.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT, true)
+	var total_h: float = (BUTTON_SIZE.y * float(ACTION_BUTTONS.size())) + (BUTTON_GAP * float(ACTION_BUTTONS.size() - 1))
+	stack.custom_minimum_size = Vector2(BUTTON_SIZE.x, total_h)
 	stack.size = Vector2(BUTTON_SIZE.x, total_h)
-	stack.position = Vector2(-BUTTON_SIZE.x - SCREEN_MARGIN, -total_h - SCREEN_MARGIN)
+	stack.anchor_left = 1.0
+	stack.anchor_top = 1.0
+	stack.anchor_right = 1.0
+	stack.anchor_bottom = 1.0
+	stack.offset_left = -BUTTON_SIZE.x - SAFE_MARGIN
+	stack.offset_top = -total_h - BOTTOM_SAFE_MARGIN
+	stack.offset_right = -SAFE_MARGIN
+	stack.offset_bottom = -BOTTOM_SAFE_MARGIN
 
 	for entry in ACTION_BUTTONS:
 		var label: String = entry[0]
@@ -86,7 +96,8 @@ func _add_action_button(parent: Node, label: String, action: StringName) -> void
 	var btn := Button.new()
 	btn.text = label
 	btn.custom_minimum_size = BUTTON_SIZE
-	btn.modulate = Color(1.0, 1.0, 1.0, 0.85)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.modulate = Color(0.15, 0.85, 1.0, 0.92) if action == &"interact" else Color(1.0, 1.0, 1.0, 0.88)
 	btn.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
 	btn.button_down.connect(func() -> void: Input.action_press(action))
 	btn.button_up.connect(func() -> void: Input.action_release(action))
