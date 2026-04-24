@@ -54,7 +54,6 @@ var player_mat_default = null
 var player_mat_hit = null
 var player_mat_guard = null
 
-
 func _ready():
 	gs = get_node_or_null("/root/GameState")
 	if gs != null and gs.has_method("ensure_runtime_state"):
@@ -72,7 +71,6 @@ func _ready():
 	_hud_result("Dungeon entered as %s." % _character_summary())
 	print("[DungeonShell] Fail-safe dungeon initialized.")
 
-
 func _process(delta):
 	_tick_timers(delta)
 	_update_enemy_ai(delta)
@@ -88,7 +86,6 @@ func _process(delta):
 	if Input.is_action_just_pressed("interact"):
 		_interact()
 
-
 func _connect_hud_signals():
 	if hud == null:
 		return
@@ -98,7 +95,6 @@ func _connect_hud_signals():
 		hud.connect("equip_item_requested", Callable(self, "_on_hud_equip_item_requested"))
 	if hud.has_signal("craft_recipe_requested"):
 		hud.connect("craft_recipe_requested", Callable(self, "_on_hud_craft_recipe_requested"))
-
 
 func _setup_materials():
 	enemy_mat_default = _mat(Color(0.9, 0.1, 0.12, 1), Color(0.4, 0.0, 0.0, 1), 0.6)
@@ -115,7 +111,6 @@ func _setup_materials():
 	if player_mesh != null:
 		player_mesh.material_override = player_mat_default
 
-
 func _mat(albedo, emission, energy):
 	var m = StandardMaterial3D.new()
 	m.albedo_color = albedo
@@ -124,23 +119,21 @@ func _mat(albedo, emission, energy):
 	m.emission_energy_multiplier = energy
 	return m
 
-
 func _build_enemy_hp_label():
 	if enemy_node == null:
 		return
 	enemy_hp_label = Label3D.new()
 	enemy_hp_label.name = "EnemyHealthLabel"
-	enemy_hp_label.position = Vector3(0, 2.15, 0)
-	enemy_hp_label.font_size = 72
-	enemy_hp_label.pixel_size = 0.01
+	enemy_hp_label.position = Vector3(0, 1.85, 0)
+	enemy_hp_label.font_size = 96
+	enemy_hp_label.pixel_size = 0.012
 	enemy_hp_label.modulate = Color(1, 0.06, 0.06, 1)
 	enemy_hp_label.outline_modulate = Color(0, 0, 0, 1)
-	enemy_hp_label.outline_size = 14
+	enemy_hp_label.outline_size = 16
 	enemy_hp_label.fixed_size = true
 	enemy_hp_label.no_depth_test = true
 	enemy_hp_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	enemy_node.add_child(enemy_hp_label)
-
 
 func _tick_timers(delta):
 	enemy_damage_timer = max(0.0, enemy_damage_timer - delta)
@@ -149,7 +142,6 @@ func _tick_timers(delta):
 	guard_timer = max(0.0, guard_timer - delta)
 	if player_mesh != null and guard_timer <= 0.0 and not player_defeated:
 		player_mesh.material_override = player_mat_default
-
 
 func _update_enemy_ai(delta):
 	if enemy_defeated or player_defeated or player == null or enemy_node == null:
@@ -161,12 +153,10 @@ func _update_enemy_ai(delta):
 		else:
 			_enemy_touch_damage()
 
-
 func _flat_distance(a, b):
 	var d = b - a
 	d.y = 0
 	return d.length()
-
 
 func _move_enemy_toward(target, delta):
 	var to_target = target - enemy_node.global_position
@@ -174,7 +164,6 @@ func _move_enemy_toward(target, delta):
 	if to_target.length() <= 0.01:
 		return
 	enemy_node.global_position += to_target.normalized() * ENEMY_MOVE_SPEED * delta
-
 
 func _enemy_touch_damage():
 	if enemy_damage_timer > 0.0:
@@ -193,13 +182,12 @@ func _enemy_touch_damage():
 		_hud_result("Enemy hit you: -%d HP." % damage)
 	_update_hud()
 
-
 func _update_prompt():
 	var prompt = "ATK | HVY | GRD | CLS | USE"
 	if _near(exit_portal, INTERACT_RANGE):
 		prompt = "USE: Exit Dungeon"
 	elif not enemy_defeated and _near(enemy_node, ATTACK_RANGE):
-		prompt = "ATK/HVY/CLS: Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
+		prompt = "ATK/HVY/CLS: %d/%d" % [enemy_hp, ENEMY_MAX_HP]
 	elif enemy_defeated and not chest_opened and _near(chest_node, INTERACT_RANGE):
 		prompt = "USE: Open Chest"
 	elif not enemy_defeated and _near(chest_node, INTERACT_RANGE):
@@ -207,7 +195,6 @@ func _update_prompt():
 	if prompt != last_prompt:
 		last_prompt = prompt
 		_hud_prompt(prompt)
-
 
 func _attack_enemy(damage, label):
 	if player_defeated:
@@ -226,10 +213,9 @@ func _attack_enemy(damage, label):
 	if enemy_hp <= 0:
 		_enemy_defeated(label)
 	else:
-		_hud_result("%s: -%d HP. Enemy HP %d/%d." % [label, int(damage), enemy_hp, ENEMY_MAX_HP])
+		_hud_result("%s: -%d HP. Enemy %d/%d." % [label, int(damage), enemy_hp, ENEMY_MAX_HP])
 	_update_hud()
 	return true
-
 
 func _heavy_attack():
 	if heavy_timer > 0.0:
@@ -238,13 +224,11 @@ func _heavy_attack():
 	if _attack_enemy(HEAVY_DAMAGE + _weapon_bonus(), "Heavy Attack"):
 		heavy_timer = HEAVY_COOLDOWN
 
-
 func _guard():
 	guard_timer = GUARD_SECONDS
 	if player_mesh != null:
 		player_mesh.material_override = player_mat_guard
 	_hud_result("Guard active: damage reduced.")
-
 
 func _class_ability():
 	if class_timer > 0.0:
@@ -253,7 +237,6 @@ func _class_ability():
 	class_timer = CLASS_COOLDOWN
 	guard_timer = max(guard_timer, 1.5)
 	_attack_enemy(CLASS_DAMAGE + _weapon_bonus(), "Class Feature")
-
 
 func _enemy_defeated(label):
 	enemy_defeated = true
@@ -270,7 +253,6 @@ func _enemy_defeated(label):
 	_hud_result("%s defeated enemy! %s" % [label, message])
 	_update_hud()
 
-
 func _update_enemy_hp_label():
 	if enemy_hp_label == null:
 		return
@@ -278,8 +260,7 @@ func _update_enemy_hp_label():
 		enemy_hp_label.visible = false
 		return
 	enemy_hp_label.visible = true
-	enemy_hp_label.text = "Enemy HP %d/%d" % [enemy_hp, ENEMY_MAX_HP]
-
+	enemy_hp_label.text = "%d/%d" % [enemy_hp, ENEMY_MAX_HP]
 
 func _interact():
 	if _near(exit_portal, INTERACT_RANGE):
@@ -289,7 +270,6 @@ func _interact():
 		_open_chest()
 		return
 	_hud_result("No dungeon object nearby.")
-
 
 func _open_chest():
 	if not enemy_defeated:
@@ -306,7 +286,6 @@ func _open_chest():
 	_hud_result("Chest opened: Rusty Sword x1, Ancient Coin x5.")
 	_update_hud()
 
-
 func _on_hud_use_item_requested(item_id):
 	if gs != null and gs.has_method("use_item"):
 		var result = gs.use_item(str(item_id))
@@ -315,14 +294,12 @@ func _on_hud_use_item_requested(item_id):
 		_hud_result("Use item unavailable.")
 	_update_hud()
 
-
 func _on_hud_equip_item_requested(item_id):
 	if gs != null and gs.has_method("equip_item") and gs.equip_item(str(item_id)):
 		_hud_result("Equipped %s." % _item_name(str(item_id)))
 	else:
 		_hud_result("Cannot equip %s." % _item_name(str(item_id)))
 	_update_hud()
-
 
 func _on_hud_craft_recipe_requested(recipe):
 	var requirements = recipe.get("requirements", {})
@@ -338,24 +315,20 @@ func _on_hud_craft_recipe_requested(recipe):
 	_hud_result("Crafted %s x%d." % [_item_name(output_id), qty])
 	_update_hud()
 
-
 func _exit_to_world():
 	_hud_result("Exiting dungeon...")
 	get_tree().change_scene_to_file("res://scenes/test_world/test_world.tscn")
-
 
 func _near(target, range):
 	if player == null or target == null:
 		return false
 	return player.global_position.distance_to(target.global_position) <= float(range)
 
-
 func _update_hud():
 	_hud_call("set_player_health", [_current_hp(), _max_hp()])
 	_hud_call("set_progression", [_level(), _xp(), _xp_to_next()])
 	_hud_call("set_character_summary", [_character_name(), "%s %s" % [_species_name(), _class_name()]])
 	_hud_call("set_inventory_tabs", [_inventory_lines(), PackedStringArray(["Dungeon crafting uses backpack materials."]), _character_view_lines()])
-
 
 func _hud_call(method_name, args):
 	if hud != null and hud.has_method(method_name):
