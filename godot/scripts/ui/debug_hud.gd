@@ -9,6 +9,9 @@ class_name DebugHud
 ## - BG3/ARK-inspired translucent full-screen inventory shell
 ## - Character / Backpack / Crafting tabs
 ## - ARK-style crafting: icon-only recipe grid + hover/tap recipe inspector
+## - Stage 15.1: real Craft button signal for selected recipe
+
+signal craft_recipe_requested(recipe: Dictionary)
 
 const HUD_FONT_SIZE: int = 16
 const HP_BAR_SIZE: Vector2 = Vector2(230, 34)
@@ -31,6 +34,7 @@ var _tab_backpack: Button
 var _tab_crafting: Button
 var _tab_character: Button
 var _left_panel_label: Label
+var _craft_button: Button
 var _center_panel_label: Label
 var _right_grid: GridContainer
 var _right_detail_label: Label
@@ -71,6 +75,8 @@ func _seed_default_recipes() -> void:
 			"description": "A basic torch kit for light in dark places.",
 			"stats": PackedStringArray(["Utility: Light source", "Stack: prototype"]),
 			"requirements": {"weathered_timber": 1},
+			"output_item_id": "torch_kit",
+			"output_quantity": 2,
 		},
 		{
 			"id": "timber_foundation",
@@ -80,6 +86,8 @@ func _seed_default_recipes() -> void:
 			"description": "A rough timber floor piece for early shelter building.",
 			"stats": PackedStringArray(["Structure", "Placement: ground snap"]),
 			"requirements": {"weathered_timber": 8},
+			"output_item_id": "timber_foundation",
+			"output_quantity": 1,
 		},
 		{
 			"id": "starter_bandage",
@@ -89,6 +97,8 @@ func _seed_default_recipes() -> void:
 			"description": "A placeholder recovery item for future survival systems.",
 			"stats": PackedStringArray(["Healing: future system", "Prototype only"]),
 			"requirements": {"weathered_timber": 2},
+			"output_item_id": "starter_bandage",
+			"output_quantity": 1,
 		},
 		{
 			"id": "camp_marker",
@@ -98,6 +108,8 @@ func _seed_default_recipes() -> void:
 			"description": "A placeholder camp object for future rest and base systems.",
 			"stats": PackedStringArray(["Utility", "Prototype only"]),
 			"requirements": {"weathered_timber": 5, "torch_kit": 1},
+			"output_item_id": "camp_marker",
+			"output_quantity": 1,
 		},
 	]
 
@@ -192,10 +204,6 @@ func _build_inventory_panel() -> void:
 	_inventory_panel.anchor_top = 0.08
 	_inventory_panel.anchor_right = 0.96
 	_inventory_panel.anchor_bottom = 0.88
-	_inventory_panel.offset_left = 0.0
-	_inventory_panel.offset_top = 0.0
-	_inventory_panel.offset_right = 0.0
-	_inventory_panel.offset_bottom = 0.0
 	_inventory_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.025, 0.018, 0.014, 0.84), Color(0.74, 0.55, 0.32, 0.95), 10))
 	add_child(_inventory_panel)
 
@@ -243,8 +251,17 @@ func _build_inventory_panel() -> void:
 	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.08, 0.055, 0.045, 0.74), Color(0.42, 0.28, 0.16, 0.95), 8))
 	columns.add_child(left_panel)
+	var left_box := VBoxContainer.new()
+	left_box.add_theme_constant_override("separation", 8)
 	_left_panel_label = _make_text_block()
-	left_panel.add_child(_wrap_margin(_left_panel_label))
+	_craft_button = Button.new()
+	_craft_button.text = "CRAFT"
+	_craft_button.custom_minimum_size = Vector2(160, 38)
+	_craft_button.add_theme_font_size_override("font_size", 16)
+	_craft_button.pressed.connect(_on_craft_button_pressed)
+	left_box.add_child(_left_panel_label)
+	left_box.add_child(_craft_button)
+	left_panel.add_child(_wrap_margin(left_box))
 
 	var center_panel := PanelContainer.new()
 	center_panel.custom_minimum_size = Vector2(230, 260)
@@ -398,6 +415,31 @@ func _update_inventory_view() -> void:
 	_center_panel_label.text = _build_center_panel_text()
 	_rebuild_grid()
 	_right_detail_label.text = _build_right_detail_text()
+	_update_craft_button()
+
+
+func _update_craft_button() -> void:
+	if _craft_button == null:
+		return
+	var show_button := _active_inventory_tab == "crafting" and not _crafting_recipes.is_empty()
+	_craft_button.visible = show_button
+	if not show_button:
+		return
+	var recipe: Dictionary = _crafting_recipes[clamp(_selected_recipe_index, 0, _crafting_recipes.size() - 1)]
+	var craftable := _recipe_is_craftable(recipe)
+	_craft_button.disabled = not craftable
+	_craft_button.text = "CRAFT" if craftable else "MISSING MATERIALS"
+	_craft_button.modulate = Color(0.45, 1.0, 0.45, 1.0) if craftable else Color(1.0, 0.38, 0.32, 0.75)
+
+
+func _on_craft_button_pressed() -> void:
+	if _active_inventory_tab != "crafting" or _crafting_recipes.is_empty():
+		return
+	var recipe: Dictionary = _crafting_recipes[clamp(_selected_recipe_index, 0, _crafting_recipes.size() - 1)]
+	if not _recipe_is_craftable(recipe):
+		set_last_result("Missing materials for %s." % recipe.get("name", "recipe"))
+		return
+	craft_recipe_requested.emit(recipe)
 
 
 func _build_left_panel_text() -> String:
@@ -424,7 +466,7 @@ func _build_left_panel_text() -> String:
 
 func _build_center_panel_text() -> String:
 	if _active_inventory_tab == "crafting":
-		return "CRAFTING\n\nSelect a recipe icon.\n\nDesktop: hover or click.\niPhone: tap an icon.\n\nGreen border = craftable.\nRed border = missing materials.\n\nCounts update from backpack inventory."
+		return "CRAFTING\n\nSelect a recipe icon.\n\nDesktop: hover or click.\niPhone: tap an icon.\n\nGreen border = craftable.\nRed border = missing materials.\n\nCRAFT consumes materials and adds output to backpack."
 
 	return "CHARACTER\n\n[ Head ]\n\n[ Chest ]     [ Hands ]\n\n[ Main Hand ]   [ Off Hand ]\n\n[ Legs ]\n\n[ Boots ]\n\nAC 10\nAttack Bonus +0\nDamage prototype"
 
@@ -528,6 +570,8 @@ func _build_selected_recipe_details() -> String:
 	for stat in recipe.get("stats", PackedStringArray()):
 		lines.append(str(stat))
 	lines.append("")
+	lines.append("Creates: %s x%d" % [_display_item_name(str(recipe.get("output_item_id", recipe.get("id", "item")))), int(recipe.get("output_quantity", 1))])
+	lines.append("")
 	lines.append("Crafting Requirements")
 	var reqs: Dictionary = recipe.get("requirements", {})
 	for item_id in reqs.keys():
@@ -537,7 +581,7 @@ func _build_selected_recipe_details() -> String:
 		lines.append("%s %s: %d / %d" % [marker, _display_item_name(str(item_id)), owned, required])
 	lines.append("")
 	lines.append("Status: %s" % ("CRAFTABLE" if _recipe_is_craftable(recipe) else "MISSING MATERIALS"))
-	lines.append("Tap another icon to inspect it.")
+	lines.append("Tap CRAFT to make this item.")
 	return "\n".join(lines)
 
 
@@ -559,7 +603,7 @@ func _slot_text(line: String) -> String:
 func _build_right_detail_text() -> String:
 	match _active_inventory_tab:
 		"crafting":
-			return "Crafting: icon grid only. Hover/click on desktop or tap on iPhone to inspect recipe requirements."
+			return "Crafting: select an icon, check owned/required materials, then press CRAFT."
 		"character":
 			return "Character View: armor, weapons, stats, and equipment slots."
 	return "Backpack: items carried and on-person inventory."
