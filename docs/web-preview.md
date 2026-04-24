@@ -1,6 +1,6 @@
 name: Web Preview
 
-on:
+"on":
   push:
     branches:
       - main
