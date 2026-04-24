@@ -56,7 +56,6 @@ func _init_session() -> void:
 	}
 
 	hud.set_player_health(GameState.current_hp, GameState.max_hp)
-	hud.set_progression(GameState.level, GameState.xp, GameState.xp_to_next)
 	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
 	hud.set_last_result("Entered world as %s." % GameState.get_character_summary())
 	print("[TestWorld] Runtime session initialized for %s" % GameState.get_character_summary())
@@ -135,7 +134,6 @@ func _craft_recipe_from_dictionary(recipe: Dictionary) -> void:
 func _on_hud_use_item_requested(item_id: String) -> void:
 	var result := GameState.use_item(item_id)
 	hud.set_player_health(GameState.current_hp, GameState.max_hp)
-	hud.set_progression(GameState.level, GameState.xp, GameState.xp_to_next)
 	hud.set_last_result(str(result.get("message", "Used item.")))
 	_update_hud_inventory()
 
@@ -169,7 +167,6 @@ func _spawn_build_placeholder(world_pos: Vector3) -> void:
 func _update_hud_inventory() -> void:
 	GameState.ensure_runtime_state()
 	hud.set_player_health(GameState.current_hp, GameState.max_hp)
-	hud.set_progression(GameState.level, GameState.xp, GameState.xp_to_next)
 	var crafting_lines := PackedStringArray([
 		"Select recipe -> inspect requirements -> CRAFT.",
 		"Crafting uses persistent GameState inventory.",
