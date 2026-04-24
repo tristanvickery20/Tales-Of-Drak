@@ -85,10 +85,7 @@ func _build_buttons() -> void:
 		var btn := Button.new()
 		btn.text = option["name"]
 		btn.custom_minimum_size = Vector2(260, 46)
-		btn.pressed.connect(func(index := i) -> void:
-			selected_species_index = index
-			_update_preview()
-		)
+		btn.pressed.connect(_select_species.bind(i))
 		species_buttons.add_child(btn)
 		species_button_refs.append(btn)
 
@@ -97,12 +94,19 @@ func _build_buttons() -> void:
 		var btn := Button.new()
 		btn.text = "%s / %s" % [option["name"], option["subclass_name"]]
 		btn.custom_minimum_size = Vector2(260, 46)
-		btn.pressed.connect(func(index := i) -> void:
-			selected_class_index = index
-			_update_preview()
-		)
+		btn.pressed.connect(_select_class.bind(i))
 		class_buttons.add_child(btn)
 		class_button_refs.append(btn)
+
+
+func _select_species(index: int) -> void:
+	selected_species_index = index
+	_update_preview()
+
+
+func _select_class(index: int) -> void:
+	selected_class_index = index
+	_update_preview()
 
 
 func _update_preview() -> void:
