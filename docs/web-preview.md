@@ -125,13 +125,9 @@ build locally:
   `res://scenes/test_world/test_world.tscn`
 - ✅ `godot/export_presets.cfg` Web preset committed
 - ✅ `.github/workflows/web-preview.yml` committed
-- ⚠️ The web export job has **not** been verified to succeed inside Replit.
-  Replit does not have Godot installed, so the export step is only proven to
-  run on the GitHub Actions runner once the workflow executes there. Until
-  the first successful Action run, treat the web preview as
-  *configured but unverified*.
+- ✅ Stage 8.6 mobile control overlay committed
 - ⚠️ GitHub Pages must be switched to **Source: GitHub Actions** manually
-  (one-time step described above).
+  if it isn't already (one-time step described above).
 
 ## Exact next manual step
 
