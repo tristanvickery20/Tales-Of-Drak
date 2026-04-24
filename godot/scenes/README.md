@@ -17,4 +17,12 @@ Stage 8 test world includes:
 - build placement hotkey test
 - minimal debug HUD
 
+Stage 8.6 additions to the same scene (no replacement, no new world):
+
+- a `MobileControls` `CanvasLayer` node attached to `test_world.tscn`
+  whose script is `res://scripts/ui/mobile_controls.gd`
+- on-screen left thumbstick + right action buttons (Jump, Sprint,
+  Interact, Craft, Place) that feed the same Godot input actions as the
+  keyboard
+
 Keep scenes small and focused. Avoid turning one scene into the whole game.

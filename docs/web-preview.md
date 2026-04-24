@@ -65,8 +65,10 @@ These are limitations of Godot's Web export, not of this pipeline:
 
 - **iOS Safari is the only engine on iPhone.** Even Chrome on iOS uses
   WebKit underneath.
-- **No mouse capture.** The third-person controller mouse-look will not work
-  the same as on desktop; touch input is needed to feel right (not in v0.1).
+- **No mouse capture / mouse-look on phone.** Stage 8.6 adds an on-screen
+  control overlay (left thumbstick + right action buttons) so the test
+  world is playable from touch. Camera-look is still tied to the spring
+  arm in v0.1.
 - **WebGL only.** Vulkan / Forward+ rendering is not available on the web
   build, which is why the project is configured for the GL Compatibility
   renderer.
@@ -79,6 +81,23 @@ These are limitations of Godot's Web export, not of this pipeline:
   preset in this repo does not require them, so the build still loads — but
   if you later enable threads in `export_presets.cfg`, you'll have to host
   the build somewhere that sets COOP/COEP headers.
+
+## Stage 8.6 — touch controls in the web preview
+
+The Stage 8 test world ships with an on-screen control overlay so it can
+be played from iPhone Safari without a keyboard:
+
+- **Left side** — virtual thumbstick that drives `move_forward`,
+  `move_back`, `move_left`, `move_right` (same actions WASD uses).
+- **Right side, top→bottom** — Jump, Sprint (hold), Interact, Craft, Place.
+  These call the same handlers that E / C / B / Space / Shift trigger on
+  desktop.
+- The overlay is currently always shown in the Web preview. Desktop users
+  can ignore it and keep using the keyboard; both input paths feed the
+  same Godot input actions.
+- Implementation: `godot/scripts/ui/mobile_controls.gd`, added as a single
+  `MobileControls` `CanvasLayer` node inside `test_world.tscn`. No new
+  scene or new gameplay was introduced.
 
 ## How to manually export from Godot if automation fails
 

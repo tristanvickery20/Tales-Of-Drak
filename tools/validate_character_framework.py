@@ -101,6 +101,39 @@ def main() -> int:
         if not file_path.exists():
             errors.append(f"missing required Stage 8 file: {file_path.relative_to(ROOT)}")
 
+    # Stage 8.6 — Browser / Touch Control Layer checks.
+    mobile_controls = ROOT / "godot/scripts/ui/mobile_controls.gd"
+    test_world_scene = ROOT / "godot/scenes/test_world/test_world.tscn"
+    project_godot = ROOT / "godot/project.godot"
+
+    if not mobile_controls.exists():
+        errors.append("missing required Stage 8.6 file: godot/scripts/ui/mobile_controls.gd")
+
+    if test_world_scene.exists():
+        scene_text = test_world_scene.read_text()
+        if "scripts/ui/mobile_controls.gd" not in scene_text:
+            errors.append(
+                "Stage 8.6: godot/scenes/test_world/test_world.tscn does not "
+                "reference scripts/ui/mobile_controls.gd"
+            )
+        if 'name="MobileControls"' not in scene_text:
+            errors.append(
+                "Stage 8.6: test_world.tscn is missing the MobileControls "
+                "CanvasLayer node"
+            )
+
+    if project_godot.exists():
+        project_text = project_godot.read_text()
+        required_actions = [
+            "move_forward", "move_back", "move_left", "move_right",
+            "jump", "sprint", "interact", "craft", "place_build",
+        ]
+        for action in required_actions:
+            if f"\n{action}=" not in project_text:
+                errors.append(
+                    f"Stage 8.6: project.godot is missing input action '{action}'"
+                )
+
     if errors:
         print("Validation failed:")
         for e in errors:

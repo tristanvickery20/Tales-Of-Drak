@@ -1,8 +1,9 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/test_world_controller.gd" id="1_ctrl"]
 [ext_resource type="Script" path="res://scripts/player/third_person_controller.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://scripts/ui/mobile_controls.gd" id="4_mobile"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(30, 30)
@@ -100,3 +101,6 @@ text = "Prompt:"
 
 [node name="ResultLabel" type="Label" parent="DebugHud/MarginContainer/VBoxContainer"]
 text = "Last:"
+
+[node name="MobileControls" type="CanvasLayer" parent="."]
+script = ExtResource("4_mobile")

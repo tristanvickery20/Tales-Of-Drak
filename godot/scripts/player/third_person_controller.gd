@@ -1,6 +1,16 @@
 extends CharacterBody3D
 class_name ThirdPersonController
 
+## Third-person movement controller for the Stage 8 test world.
+##
+## Reads movement / jump / sprint via the Godot InputMap actions:
+##   move_forward, move_back, move_left, move_right, jump, sprint
+##
+## Both desktop keyboard input (mapped in project.godot) and the Stage 8.6
+## mobile touch controls (which call Input.action_press / action_release)
+## drive these same actions, so the controller does not need to know which
+## input device is active.
+
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.0
 @export var jump_velocity: float = 4.5
@@ -25,25 +35,17 @@ func _physics_process(delta: float) -> void:
 
 
 func _movement_input() -> Vector3:
-	var x := 0.0
-	var z := 0.0
-
-	if Input.is_key_pressed(KEY_A):
-		x -= 1.0
-	if Input.is_key_pressed(KEY_D):
-		x += 1.0
-	if Input.is_key_pressed(KEY_W):
-		z -= 1.0
-	if Input.is_key_pressed(KEY_S):
-		z += 1.0
-
+	var x := Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	var z := Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
 	var v := Vector3(x, 0.0, z)
-	return v.normalized()
+	if v.length() > 1.0:
+		v = v.normalized()
+	return v
 
 
 func _jump_pressed() -> bool:
-	return Input.is_key_pressed(KEY_SPACE)
+	return Input.is_action_pressed("jump")
 
 
 func _sprint_pressed() -> bool:
-	return Input.is_key_pressed(KEY_SHIFT)
+	return Input.is_action_pressed("sprint")

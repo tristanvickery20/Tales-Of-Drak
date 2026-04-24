@@ -1,0 +1,128 @@
+Create Stage 8.6 — Browser / Touch Control Layer for Tales of Drak.
+
+Grand plan reminder:
+We are building a phone-first, AI-assisted, open-source Godot co-op RPG framework. The first milestone is Framework Prototype v0.1, not a full game.
+
+Completed stages:
+1. Repo foundation
+2. Data Contract v0.1
+3. Godot Data Loader Shell v0.1
+4. Character + Stats Framework v0.1
+5. Inventory + Equipment Framework v0.1
+6. Gathering + Crafting Framework v0.1
+7. Housing + Building Framework v0.1
+8. Movement + Test World Prototype v0.1
+8.5 Web Preview Pipeline — working on GitHub Pages and loading on iPhone
+
+Current working preview:
+The game exports to Web, deploys through GitHub Pages, loads on iPhone Safari, reads design JSON, and initializes the game session.
+
+Current problem:
+The test world expects keyboard controls:
+- WASD movement
+- Space jump
+- Shift sprint
+- E interact/gather
+- C craft
+- B place build piece
+
+I need this to be usable from iPhone Safari.
+
+Task:
+Add a simple browser/mobile touch control layer to the existing Stage 8 test world.
+
+Do NOT build combat.
+Do NOT build multiplayer.
+Do NOT build dungeons yet.
+Do NOT redesign the game.
+Do NOT replace the current test world.
+Do NOT rewrite existing systems unless needed for input support.
+Do NOT remove keyboard controls.
+Keep keyboard controls working for desktop.
+
+Requirements:
+
+1. Add touch controls to the existing test world scene:
+   - left-side movement control
+   - either a simple D-pad or virtual joystick
+   - right-side action buttons
+
+2. Required mobile buttons:
+   - Jump
+   - Sprint toggle or hold button
+   - Interact/Gather
+   - Craft
+   - Place Build Piece
+
+3. The controls should call the same existing actions as keyboard input:
+   - movement should drive the existing ThirdPersonController
+   - interact should trigger the same gather logic
+   - craft should trigger the same CraftingSystem craft test
+   - place should trigger the same BuildingSystem placement test
+
+4. Keep desktop controls:
+   - WASD
+   - Space
+   - Shift
+   - E
+   - C
+   - B
+
+5. Add input actions in project.godot if needed:
+   - move_forward
+   - move_back
+   - move_left
+   - move_right
+   - jump
+   - sprint
+   - interact
+   - craft
+   - place_build
+
+6. Refactor ThirdPersonController only as needed so it can accept:
+   - keyboard movement
+   - touch movement vector
+
+7. Add a MobileControls UI script under:
+   - godot/scripts/ui/mobile_controls.gd
+
+8. Add mobile controls to the existing scene:
+   - godot/scenes/test_world/test_world.tscn
+
+9. Add simple visibility behavior:
+   - show controls on web/mobile/touchscreen if possible
+   - okay to always show controls in Web preview for now
+   - do not overcomplicate device detection
+
+10. HUD/mobile layout:
+   - make existing debug HUD more readable on iPhone
+   - increase font sizes slightly if needed
+   - do not polish heavily
+   - function over beauty
+
+11. Update documentation:
+   - README.md stage tracker
+   - godot/scenes/README.md
+   - godot/scripts/README.md
+   - godot/ui/README.md
+   - docs/web-preview.md if needed
+
+12. Update validation:
+   - confirm mobile_controls.gd exists
+   - confirm test_world.tscn references it
+   - confirm project.godot has required input actions
+   - confirm design JSON still parses
+   - keep existing validation checks
+
+13. After changes, make sure GitHub Actions web preview will rebuild normally.
+   - Do not edit the workflow unless required.
+   - Do not remove the design bundling fix.
+   - Do not break Stage 8.5.
+
+Output required:
+- List files created/changed
+- Explain how mobile controls work
+- Explain desktop controls still work
+- Explain how to test on iPhone
+- Confirm validation checks pass
+- Confirm no gameplay stage beyond 8.6
