@@ -37,14 +37,14 @@
     },
     {
       "id": "warden_bulwark",
-      "display_name": "Warden Bulwark",
+      "display_name": "Class Feature",
       "ability_type": "damage_guard",
       "damage": 8,
       "cooldown_seconds": 6.0,
       "duration_seconds": 1.5,
       "guard_damage_reduction": 0.5,
-      "class_id": "warden",
-      "subclass_id": "ashen_guard"
+      "class_id": "",
+      "subclass_id": ""
     }
   ]
 }
