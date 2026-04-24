@@ -1,16 +1,14 @@
 extends Node3D
 
-## Dungeon Shell Controller — fail-safe Phase 1 dungeon loop.
-##
-## Keeps the restored RPG HUD/inventory and makes dungeon startup independent
-## from fragile typed dependencies. Uses GameState when available, with sane
-## fallback values so the dungeon remains playable in web preview.
+## Dungeon Shell Controller — stable Phase 1 dungeon loop.
+## Uses the GameState autoload directly so damage, loot, XP, and equipment all
+## mutate the same runtime state the HUD reads.
 
 const INTERACT_RANGE = 3.0
 const ATTACK_RANGE = 3.2
 const ENEMY_MAX_HP = 30
 const ENEMY_AGGRO_RANGE = 8.0
-const ENEMY_STOP_RANGE = 1.55
+const ENEMY_STOP_RANGE = 2.35
 const ENEMY_MOVE_SPEED = 1.25
 const ENEMY_TOUCH_DAMAGE = 5
 const ENEMY_DAMAGE_COOLDOWN = 1.35
@@ -34,7 +32,6 @@ const REWARD_COIN_ID = "ancient_coin"
 @onready var exit_portal = get_node_or_null("ExitPortal")
 @onready var hud = get_node_or_null("DebugHud")
 
-var gs = null
 var enemy_hp = ENEMY_MAX_HP
 var enemy_defeated = false
 var chest_opened = false
@@ -55,28 +52,26 @@ var player_mat_hit = null
 var player_mat_guard = null
 
 func _ready():
-	gs = get_node_or_null("/root/GameState")
-	if gs != null and gs.has_method("ensure_runtime_state"):
-		gs.ensure_runtime_state()
+	GameState.ensure_runtime_state()
 	enemy_hp = ENEMY_MAX_HP
 	enemy_defeated = false
 	chest_opened = false
-	player_defeated = _current_hp() <= 0
+	player_defeated = GameState.current_hp <= 0
 	_setup_materials()
 	_build_enemy_hp_label()
 	_connect_hud_signals()
 	_update_hud()
 	_update_enemy_hp_label()
 	_hud_prompt("ATK | HVY | GRD | CLS | USE")
-	_hud_result("Dungeon entered as %s." % _character_summary())
-	print("[DungeonShell] Fail-safe dungeon initialized.")
+	_hud_result("Dungeon entered as %s." % GameState.get_character_summary())
+	print("[DungeonShell] GameState-backed dungeon initialized.")
 
 func _process(delta):
 	_tick_timers(delta)
 	_update_enemy_ai(delta)
 	_update_prompt()
 	if Input.is_action_just_pressed("attack"):
-		_attack_enemy(BASIC_DAMAGE + _weapon_bonus(), "Basic Attack")
+		_attack_enemy(BASIC_DAMAGE + GameState.get_weapon_damage_bonus(), "Basic Attack")
 	if Input.is_action_just_pressed("heavy_attack"):
 		_heavy_attack()
 	if Input.is_action_just_pressed("guard"):
@@ -125,11 +120,11 @@ func _build_enemy_hp_label():
 	enemy_hp_label = Label3D.new()
 	enemy_hp_label.name = "EnemyHealthLabel"
 	enemy_hp_label.position = Vector3(0, 1.45, 0)
-	enemy_hp_label.font_size = 36
-	enemy_hp_label.pixel_size = 0.004
+	enemy_hp_label.font_size = 28
+	enemy_hp_label.pixel_size = 0.003
 	enemy_hp_label.modulate = Color(1, 0.06, 0.06, 1)
 	enemy_hp_label.outline_modulate = Color(0, 0, 0, 1)
-	enemy_hp_label.outline_size = 8
+	enemy_hp_label.outline_size = 6
 	enemy_hp_label.fixed_size = false
 	enemy_hp_label.no_depth_test = true
 	enemy_hp_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -172,11 +167,11 @@ func _enemy_touch_damage():
 	var damage = ENEMY_TOUCH_DAMAGE
 	if guard_timer > 0.0:
 		damage = max(1, int(round(float(damage) * GUARD_DAMAGE_MULTIPLIER)))
-	_set_current_hp(_current_hp() - damage)
+	GameState.set_current_hp(GameState.current_hp - damage)
 	if player_mesh != null:
 		player_mesh.material_override = player_mat_guard if guard_timer > 0.0 else player_mat_hit
-	if _current_hp() <= 0:
-		player_defeated = true
+	player_defeated = GameState.current_hp <= 0
+	if player_defeated:
 		_hud_result("You were defeated. Use the exit portal to leave.")
 	else:
 		_hud_result("Enemy hit you: -%d HP." % damage)
@@ -221,7 +216,7 @@ func _heavy_attack():
 	if heavy_timer > 0.0:
 		_hud_result("Heavy cooldown: %.1fs" % heavy_timer)
 		return
-	if _attack_enemy(HEAVY_DAMAGE + _weapon_bonus(), "Heavy Attack"):
+	if _attack_enemy(HEAVY_DAMAGE + GameState.get_weapon_damage_bonus(), "Heavy Attack"):
 		heavy_timer = HEAVY_COOLDOWN
 
 func _guard():
@@ -236,7 +231,7 @@ func _class_ability():
 		return
 	class_timer = CLASS_COOLDOWN
 	guard_timer = max(guard_timer, 1.5)
-	_attack_enemy(CLASS_DAMAGE + _weapon_bonus(), "Class Feature")
+	_attack_enemy(CLASS_DAMAGE + GameState.get_weapon_damage_bonus(), "Class Feature")
 
 func _enemy_defeated(label):
 	enemy_defeated = true
@@ -246,11 +241,8 @@ func _enemy_defeated(label):
 		enemy_hp_label.visible = false
 	if chest_mesh != null:
 		chest_mesh.material_override = _mat(Color(0.15, 1.0, 0.35, 1), Color(0, 0.8, 0.2, 1), 1.0)
-	var message = "+%d XP. Chest unlocked." % ENEMY_XP_REWARD
-	if gs != null and gs.has_method("add_xp"):
-		var result = gs.add_xp(ENEMY_XP_REWARD)
-		message = str(result.get("message", message)) + " Chest unlocked."
-	_hud_result("%s defeated enemy! %s" % [label, message])
+	var result = GameState.add_xp(ENEMY_XP_REWARD)
+	_hud_result("%s defeated enemy! %s Chest unlocked." % [label, str(result.get("message", "+XP."))])
 	_update_hud()
 
 func _update_enemy_hp_label():
@@ -281,38 +273,36 @@ func _open_chest():
 	chest_opened = true
 	if chest_mesh != null:
 		chest_mesh.material_override = chest_mat_open
-	_add_item(REWARD_ITEM_ID, 1)
-	_add_item(REWARD_COIN_ID, 5)
+	GameState.add_item(REWARD_ITEM_ID, 1)
+	GameState.add_item(REWARD_COIN_ID, 5)
 	_hud_result("Chest opened: Rusty Sword x1, Ancient Coin x5.")
 	_update_hud()
 
 func _on_hud_use_item_requested(item_id):
-	if gs != null and gs.has_method("use_item"):
-		var result = gs.use_item(str(item_id))
-		_hud_result(str(result.get("message", "Used item.")))
-	else:
-		_hud_result("Use item unavailable.")
+	var result = GameState.use_item(str(item_id))
+	_hud_result(str(result.get("message", "Used item.")))
 	_update_hud()
 
 func _on_hud_equip_item_requested(item_id):
-	if gs != null and gs.has_method("equip_item") and gs.equip_item(str(item_id)):
-		_hud_result("Equipped %s." % _item_name(str(item_id)))
+	if GameState.equip_item(str(item_id)):
+		_hud_result("Equipped %s." % GameState.get_item_name(str(item_id)))
 	else:
-		_hud_result("Cannot equip %s." % _item_name(str(item_id)))
+		_hud_result("Cannot equip %s." % GameState.get_item_name(str(item_id)))
 	_update_hud()
 
 func _on_hud_craft_recipe_requested(recipe):
 	var requirements = recipe.get("requirements", {})
 	for item_id in requirements.keys():
-		if _item_count(str(item_id)) < int(requirements[item_id]):
-			_hud_result("Missing %s." % _item_name(str(item_id)))
+		if GameState.get_item_count(str(item_id)) < int(requirements[item_id]):
+			_hud_result("Missing %s." % GameState.get_item_name(str(item_id)))
+			_update_hud()
 			return
 	for item_id in requirements.keys():
-		_remove_item(str(item_id), int(requirements[item_id]))
+		GameState.remove_item(str(item_id), int(requirements[item_id]))
 	var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
 	var qty = max(1, int(recipe.get("output_quantity", 1)))
-	_add_item(output_id, qty)
-	_hud_result("Crafted %s x%d." % [_item_name(output_id), qty])
+	GameState.add_item(output_id, qty)
+	_hud_result("Crafted %s x%d." % [GameState.get_item_name(output_id), qty])
 	_update_hud()
 
 func _exit_to_world():
@@ -325,10 +315,10 @@ func _near(target, range):
 	return player.global_position.distance_to(target.global_position) <= float(range)
 
 func _update_hud():
-	_hud_call("set_player_health", [_current_hp(), _max_hp()])
-	_hud_call("set_progression", [_level(), _xp(), _xp_to_next()])
-	_hud_call("set_character_summary", [_character_name(), "%s %s" % [_species_name(), _class_name()]])
-	_hud_call("set_inventory_tabs", [_inventory_lines(), PackedStringArray(["Dungeon crafting uses backpack materials."]), _character_view_lines()])
+	_hud_call("set_player_health", [GameState.current_hp, GameState.max_hp])
+	_hud_call("set_progression", [GameState.level, GameState.xp, GameState.xp_to_next])
+	_hud_call("set_character_summary", [GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name]])
+	_hud_call("set_inventory_tabs", [GameState.get_inventory_lines(), PackedStringArray(["Dungeon crafting uses backpack materials."],), GameState.get_character_view_lines()])
 
 func _hud_call(method_name, args):
 	if hud != null and hud.has_method(method_name):
@@ -341,54 +331,3 @@ func _hud_prompt(text):
 func _hud_result(text):
 	if hud != null and hud.has_method("set_last_result"):
 		hud.set_last_result(text)
-
-func _current_hp(): return int(gs.current_hp) if gs != null else 24
-func _max_hp(): return int(gs.max_hp) if gs != null else 24
-func _level(): return int(gs.level) if gs != null else 1
-func _xp(): return int(gs.xp) if gs != null else 0
-func _xp_to_next(): return int(gs.xp_to_next) if gs != null else 100
-func _character_name(): return str(gs.character_name) if gs != null else "Adventurer"
-func _species_name(): return str(gs.species_name) if gs != null else "Human"
-func _class_name(): return str(gs.class_name) if gs != null else "Fighter"
-
-func _character_summary():
-	if gs != null and gs.has_method("get_character_summary"):
-		return str(gs.get_character_summary())
-	return "%s - Level %d %s %s" % [_character_name(), _level(), _species_name(), _class_name()]
-
-func _inventory_lines():
-	if gs != null and gs.has_method("get_inventory_lines"):
-		return gs.get_inventory_lines()
-	return PackedStringArray(["starter_hatchet x1", "torch_kit x1", "weathered_timber x10"])
-
-func _character_view_lines():
-	if gs != null and gs.has_method("get_character_view_lines"):
-		return gs.get_character_view_lines()
-	return PackedStringArray([_character_summary(), "HP: %d / %d" % [_current_hp(), _max_hp()], "XP: %d / %d" % [_xp(), _xp_to_next()]])
-
-func _weapon_bonus():
-	if gs != null and gs.has_method("get_weapon_damage_bonus"):
-		return int(gs.get_weapon_damage_bonus())
-	return 1
-
-func _set_current_hp(value):
-	if gs != null and gs.has_method("set_current_hp"):
-		gs.set_current_hp(int(value))
-
-func _item_count(item_id):
-	if gs != null and gs.has_method("get_item_count"):
-		return int(gs.get_item_count(str(item_id)))
-	return 0
-
-func _item_name(item_id):
-	if gs != null and gs.has_method("get_item_name"):
-		return str(gs.get_item_name(str(item_id)))
-	return str(item_id).replace("_", " ").capitalize()
-
-func _add_item(item_id, qty):
-	if gs != null and gs.has_method("add_item"):
-		gs.add_item(str(item_id), int(qty))
-
-func _remove_item(item_id, qty):
-	if gs != null and gs.has_method("remove_item"):
-		gs.remove_item(str(item_id), int(qty))
