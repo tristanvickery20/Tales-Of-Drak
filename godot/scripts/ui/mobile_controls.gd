@@ -1,21 +1,22 @@
 extends CanvasLayer
 class_name MobileControls
 
-## Stage 8.6 — Browser / Touch Control Layer.
+## Browser / Touch Control Layer.
 ##
 ## Builds a minimal on-screen control overlay for iPhone/browser testing.
-## The overlay is intentionally obvious: left joystick + right action panel.
+## The overlay uses a left joystick and compact right action grid.
 ## Buttons route through the same InputMap actions as keyboard controls.
 
 const MAX_RADIUS: float = 72.0
 const DEAD_ZONE: float = 0.18
-const BUTTON_SIZE: Vector2 = Vector2(132, 52)
-const BUTTON_GAP: float = 8.0
+const BUTTON_SIZE: Vector2 = Vector2(98, 46)
+const BUTTON_GAP: float = 7.0
 const JOYSTICK_SIZE: Vector2 = Vector2(180, 180)
 const KNOB_SIZE: Vector2 = Vector2(72, 72)
-const SAFE_MARGIN: float = 28.0
-const BOTTOM_SAFE_MARGIN: float = 132.0
-const BUTTON_FONT_SIZE: int = 18
+const SAFE_MARGIN: float = 22.0
+const BOTTOM_SAFE_MARGIN: float = 126.0
+const BUTTON_FONT_SIZE: int = 15
+const ACTION_COLUMNS: int = 2
 
 const MOVE_ACTIONS: Array[StringName] = [
 	&"move_forward", &"move_back", &"move_left", &"move_right"
@@ -25,7 +26,9 @@ const ACTION_BUTTONS: Array = [
 	["SPRINT",   &"sprint"],
 	["INTERACT", &"interact"],
 	["ATTACK",   &"attack"],
-	["CRAFT",    &"craft"],
+	["HEAVY",    &"heavy_attack"],
+	["GUARD",    &"guard"],
+	["WARDEN",   &"class_ability"],
 	["PLACE",    &"place_build"],
 ]
 
@@ -69,28 +72,32 @@ func _build_joystick() -> void:
 
 
 func _build_action_buttons() -> void:
-	var stack := VBoxContainer.new()
-	stack.name = "ActionButtons"
-	stack.add_theme_constant_override("separation", int(BUTTON_GAP))
-	stack.modulate = Color(1.0, 1.0, 1.0, 0.96)
-	add_child(stack)
+	var grid := GridContainer.new()
+	grid.name = "ActionButtons"
+	grid.columns = ACTION_COLUMNS
+	grid.add_theme_constant_override("h_separation", int(BUTTON_GAP))
+	grid.add_theme_constant_override("v_separation", int(BUTTON_GAP))
+	grid.modulate = Color(1.0, 1.0, 1.0, 0.96)
+	add_child(grid)
 
-	var total_h: float = (BUTTON_SIZE.y * float(ACTION_BUTTONS.size())) + (BUTTON_GAP * float(ACTION_BUTTONS.size() - 1))
-	stack.custom_minimum_size = Vector2(BUTTON_SIZE.x, total_h)
-	stack.size = Vector2(BUTTON_SIZE.x, total_h)
-	stack.anchor_left = 1.0
-	stack.anchor_top = 1.0
-	stack.anchor_right = 1.0
-	stack.anchor_bottom = 1.0
-	stack.offset_left = -BUTTON_SIZE.x - SAFE_MARGIN
-	stack.offset_top = -total_h - BOTTOM_SAFE_MARGIN
-	stack.offset_right = -SAFE_MARGIN
-	stack.offset_bottom = -BOTTOM_SAFE_MARGIN
+	var rows := ceil(float(ACTION_BUTTONS.size()) / float(ACTION_COLUMNS))
+	var total_w: float = (BUTTON_SIZE.x * ACTION_COLUMNS) + (BUTTON_GAP * (ACTION_COLUMNS - 1))
+	var total_h: float = (BUTTON_SIZE.y * rows) + (BUTTON_GAP * max(0, rows - 1))
+	grid.custom_minimum_size = Vector2(total_w, total_h)
+	grid.size = Vector2(total_w, total_h)
+	grid.anchor_left = 1.0
+	grid.anchor_top = 1.0
+	grid.anchor_right = 1.0
+	grid.anchor_bottom = 1.0
+	grid.offset_left = -total_w - SAFE_MARGIN
+	grid.offset_top = -total_h - BOTTOM_SAFE_MARGIN
+	grid.offset_right = -SAFE_MARGIN
+	grid.offset_bottom = -BOTTOM_SAFE_MARGIN
 
 	for entry in ACTION_BUTTONS:
 		var label: String = entry[0]
 		var action: StringName = entry[1]
-		_add_action_button(stack, label, action)
+		_add_action_button(grid, label, action)
 
 
 func _add_action_button(parent: Node, label: String, action: StringName) -> void:
@@ -100,8 +107,12 @@ func _add_action_button(parent: Node, label: String, action: StringName) -> void
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if action == &"interact":
 		btn.modulate = Color(0.15, 0.85, 1.0, 0.92)
-	elif action == &"attack":
+	elif action == &"attack" or action == &"heavy_attack":
 		btn.modulate = Color(1.0, 0.25, 0.2, 0.95)
+	elif action == &"guard":
+		btn.modulate = Color(0.35, 0.65, 1.0, 0.92)
+	elif action == &"class_ability":
+		btn.modulate = Color(0.6, 0.35, 1.0, 0.92)
 	else:
 		btn.modulate = Color(1.0, 1.0, 1.0, 0.88)
 	btn.add_theme_font_size_override("font_size", BUTTON_FONT_SIZE)
