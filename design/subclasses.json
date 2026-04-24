@@ -3,39 +3,39 @@
   "record_type": "subclass",
   "records": [
     {
-      "id": "ashen_guard",
-      "class_id": "warden",
-      "name": "Ashen Guard",
-      "theme": "shield_ruin_sentinel",
+      "id": "champion",
+      "class_id": "fighter",
+      "name": "Champion",
+      "theme": "straightforward_martial_hero",
       "bonus_stat_ids": [
-        "vitality",
-        "resolve"
+        "strength",
+        "constitution"
       ],
       "starter_ability_bonuses": {
-        "constitution": 1
+        "strength": 1
       }
     },
     {
-      "id": "night_prowler",
-      "class_id": "veilstrider",
-      "name": "Night Prowler",
-      "theme": "ambush_mobility",
+      "id": "fiend_pact",
+      "class_id": "warlock",
+      "name": "Fiend Pact",
+      "theme": "dark_bargain_blasting_magic",
       "bonus_stat_ids": [
-        "dexterity",
-        "luck"
+        "charisma",
+        "constitution"
       ],
       "starter_ability_bonuses": {
-        "dexterity": 1
+        "charisma": 1
       }
     },
     {
-      "id": "bone_scholar",
-      "class_id": "gravebound",
-      "name": "Bone Scholar",
-      "theme": "forbidden_rituals",
+      "id": "evocation",
+      "class_id": "wizard",
+      "name": "Evocation",
+      "theme": "direct_arcane_damage",
       "bonus_stat_ids": [
-        "intellect",
-        "willpower"
+        "intelligence",
+        "wisdom"
       ],
       "starter_ability_bonuses": {
         "intelligence": 1
