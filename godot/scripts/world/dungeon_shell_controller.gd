@@ -101,11 +101,15 @@ var player_guard_material: StandardMaterial3D
 
 func _ready() -> void:
 	print("[DungeonShell] Dungeon initialized.")
+	player_hp = PLAYER_MAX_HP
+	player_defeated = false
+	enemy_hp = ENEMY_MAX_HP
+	enemy_defeated = false
 	enemy_spawn_position = enemy_placeholder.global_position
 	_load_ability_data()
 	_setup_feedback_materials()
 	_build_enemy_health_label()
-	hud.set_player_health(player_hp, PLAYER_MAX_HP)
+	_apply_player_health_to_hud()
 	hud.set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
 	_update_status_lines()
 	_update_inventory_tabs()
@@ -131,16 +135,25 @@ func _process(delta: float) -> void:
 		_on_interact_pressed()
 
 
+func _apply_player_health_to_hud() -> void:
+	hud.set_player_health(player_hp, PLAYER_MAX_HP)
+	# Extra deferred write prevents the HUD _ready fallback from ever winning load order.
+	hud.call_deferred("set_player_health", player_hp, PLAYER_MAX_HP)
+
+
 func _build_enemy_health_label() -> void:
 	enemy_hp_label = Label3D.new()
 	enemy_hp_label.name = "EnemyHealthLabel"
-	enemy_hp_label.position = Vector3(0.0, 1.65, 0.0)
-	enemy_hp_label.text = "HP"
-	enemy_hp_label.font_size = 44
-	enemy_hp_label.pixel_size = 0.012
-	enemy_hp_label.modulate = Color(1.0, 0.08, 0.08, 1.0)
+	enemy_hp_label.position = Vector3(0.0, 2.15, 0.0)
+	enemy_hp_label.text = "Enemy\n30/30"
+	enemy_hp_label.font_size = 72
+	enemy_hp_label.pixel_size = 0.01
+	enemy_hp_label.modulate = Color(1.0, 0.06, 0.06, 1.0)
 	enemy_hp_label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
-	enemy_hp_label.outline_size = 10
+	enemy_hp_label.outline_size = 14
+	enemy_hp_label.fixed_size = true
+	enemy_hp_label.no_depth_test = true
+	enemy_hp_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	enemy_placeholder.add_child(enemy_hp_label)
 
 
@@ -154,7 +167,7 @@ func _update_enemy_health_label() -> void:
 	var filled_count := int(round((float(enemy_hp) / float(ENEMY_MAX_HP)) * 10.0))
 	filled_count = clamp(filled_count, 0, 10)
 	var empty_count := 10 - filled_count
-	enemy_hp_label.text = "%d/%d\n%s%s" % [enemy_hp, ENEMY_MAX_HP, "█".repeat(filled_count), "░".repeat(empty_count)]
+	enemy_hp_label.text = "Enemy HP %d/%d\n%s%s" % [enemy_hp, ENEMY_MAX_HP, "█".repeat(filled_count), "░".repeat(empty_count)]
 
 
 func _load_ability_data() -> void:
@@ -351,7 +364,7 @@ func _try_enemy_touch_damage() -> void:
 		last_enemy_hit_message = "Enemy hit you: -%d HP" % damage
 
 	player_hp = max(0, player_hp - damage)
-	hud.set_player_health(player_hp, PLAYER_MAX_HP)
+	_apply_player_health_to_hud()
 	player_flash_timer = DAMAGE_FLASH_SECONDS
 	player_mesh.material_override = player_damage_material if guard_timer <= 0.0 else player_guard_material
 
@@ -459,6 +472,7 @@ func _try_damage_enemy(damage: int, source_label: String) -> bool:
 	if enemy_hp <= 0:
 		enemy_defeated = true
 		_set_enemy_state(EnemyState.DEFEATED)
+		_update_enemy_health_label()
 		enemy_placeholder.visible = false
 		chest_mesh.material_override = chest_unlocked_material
 		hud.set_last_result("%s defeated enemy! Chest unlocked." % source_label)
