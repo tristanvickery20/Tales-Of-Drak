@@ -162,7 +162,5 @@ func _start_adventure() -> void:
 		"subclass_id": clazz["subclass_id"],
 		"subclass_name": clazz["subclass_name"],
 	}
-	if GameState != null:
-		GameState.set_character(selection)
-	await get_tree().process_frame
+	GameState.set_character(selection)
 	get_tree().change_scene_to_file(TEST_WORLD_SCENE)
