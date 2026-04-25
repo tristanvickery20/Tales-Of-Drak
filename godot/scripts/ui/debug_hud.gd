@@ -36,7 +36,6 @@ var dbg_overlay
 var dbg_panel
 var dbg_lines_label
 
-var gs = null
 var active_tab = "backpack"
 var selected_item_index = 0
 var selected_recipe_index = 0
@@ -64,9 +63,8 @@ var recipes = [
 ]
 
 func _ready():
-	gs = _get_game_state()
-	if gs != null and gs.has_signal("runtime_state_changed"):
-		gs.connect("runtime_state_changed", Callable(self, "_refresh_from_gamestate"))
+	if GameState.has_signal("runtime_state_changed"):
+		GameState.connect("runtime_state_changed", Callable(self, "_refresh_from_gamestate"))
 	root_margin.offset_top = 88
 	root_margin.offset_right = -105
 	_build_bars()
@@ -78,17 +76,11 @@ func _ready():
 	_update_view()
 
 func _refresh_from_gamestate():
-	if gs == null:
-		gs = _get_game_state()
-	if gs == null:
-		return
-	if gs.has_method("ensure_runtime_state"):
-		gs.ensure_runtime_state()
-	set_player_health(gs.current_hp, gs.max_hp)
-	set_progression(gs.level, gs.xp, gs.xp_to_next)
-	set_character_summary(gs.character_name, "%s %s" % [gs.species_name, gs.class_name])
-	if gs.has_method("get_inventory_lines") and gs.has_method("get_character_view_lines"):
-		set_inventory_tabs(gs.get_inventory_lines(), PackedStringArray(), gs.get_character_view_lines())
+	GameState.ensure_runtime_state()
+	set_player_health(GameState.current_hp, GameState.max_hp)
+	set_progression(GameState.level, GameState.xp, GameState.xp_to_next)
+	set_character_summary(GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name])
+	set_inventory_tabs(GameState.get_inventory_lines(), PackedStringArray(), GameState.get_character_view_lines())
 
 func _panel_style(bg, border, radius = 8):
 	var s = StyleBoxFlat.new()
@@ -257,11 +249,8 @@ func _refresh_debug_panel():
 	if dbg_lines_label == null:
 		return
 	var lines = PackedStringArray()
-	if gs != null and gs.has_method("get_debug_lines"):
-		var gs_lines = gs.get_debug_lines()
-		lines.append_array(gs_lines)
-	else:
-		lines.append("GameState not found")
+	var gs_lines = GameState.get_debug_lines()
+	lines.append_array(gs_lines)
 	lines.append("--- HUD State ---")
 	lines.append("Selected item index: %d" % selected_item_index)
 	lines.append("Selected recipe index: %d" % selected_recipe_index)
@@ -528,26 +517,17 @@ func _secondary_action():
 		_equip_direct(str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", "")))
 
 func _craft_direct(recipe):
-	if gs == null:
-		craft_recipe_requested.emit(recipe)
-		return
-	var result = gs.craft_recipe(recipe)
+	var result = GameState.craft_recipe(recipe)
 	set_last_result(str(result.get("message", "Craft result.")))
 	_refresh_from_gamestate()
 
 func _use_direct(item_id):
-	if gs == null:
-		use_item_requested.emit(item_id)
-		return
-	var result = gs.use_item(item_id)
+	var result = GameState.use_item(item_id)
 	set_last_result(str(result.get("message", "Used item.")))
 	_refresh_from_gamestate()
 
 func _equip_direct(item_id):
-	if gs == null:
-		equip_item_requested.emit(item_id)
-		return
-	var result = gs.equip_item(item_id)
+	var result = GameState.equip_item(item_id)
 	set_last_result(str(result.get("message", "Equip result.")))
 	_refresh_from_gamestate()
 
@@ -559,29 +539,18 @@ func _item_def(item_id):
 func _item_name(item_id): return str(_item_def(item_id).get("name", item_id))
 func _item_icon(item_id): return str(_item_def(item_id).get("icon", "?"))
 
-func _get_game_state():
-	if Engine.has_singleton("GameState"):
-		return Engine.get_singleton("GameState")
-	return get_node_or_null("/root/GameState")
-
 func _run_phase1_test():
-	if gs == null:
-		gs = _get_game_state()
 	var results = PackedStringArray()
 	results.append("=== PHASE 1 SELF TEST ===")
-	if gs == null:
-		results.append("GameState: FAIL — not found")
-		dbg_lines_label.text = "\n".join(results)
-		return
 	results.append("GameState: OK")
-	gs.ensure_runtime_state()
+	GameState.ensure_runtime_state()
 
-	var start_timber = gs.get_item_count("weathered_timber")
-	var start_bandage = gs.get_item_count("starter_bandage")
+	var start_timber = GameState.get_item_count("weathered_timber")
+	var start_bandage = GameState.get_item_count("starter_bandage")
 	var bandage_recipe = {"id":"starter_bandage","name":"Simple Bandage","requirements":{"weathered_timber":2},"output_item_id":"starter_bandage","output_quantity":1}
-	var craft_result = gs.craft_recipe(bandage_recipe)
-	var end_timber = gs.get_item_count("weathered_timber")
-	var end_bandage = gs.get_item_count("starter_bandage")
+	var craft_result = GameState.craft_recipe(bandage_recipe)
+	var end_timber = GameState.get_item_count("weathered_timber")
+	var end_bandage = GameState.get_item_count("starter_bandage")
 
 	if craft_result.get("ok", false):
 		results.append("Craft Simple Bandage: PASS")
@@ -596,40 +565,40 @@ func _run_phase1_test():
 	else:
 		results.append("Bandage added: FAIL - bandage %d instead of %d" % [end_bandage, start_bandage + 1])
 
-	var equip_result = gs.equip_item("starter_hatchet")
-	if equip_result.get("ok", false) and gs.equipment.get("main_hand", "") == "starter_hatchet":
+	var equip_result = GameState.equip_item("starter_hatchet")
+	if equip_result.get("ok", false) and GameState.equipment.get("main_hand", "") == "starter_hatchet":
 		results.append("Equip Starter Hatchet: PASS")
 	else:
-		results.append("Equip Starter Hatchet: FAIL - %s, main_hand=%s" % [equip_result.get("message", ""), gs.equipment.get("main_hand", "")])
+		results.append("Equip Starter Hatchet: FAIL - %s, main_hand=%s" % [equip_result.get("message", ""), GameState.equipment.get("main_hand", "")])
 
-	var hp_before = int(gs.current_hp)
-	var damage_result = gs.damage_player(5, "self_test_enemy")
-	var hp_after = int(gs.current_hp)
+	var hp_before = int(GameState.current_hp)
+	var damage_result = GameState.damage_player(5, "self_test_enemy")
+	var hp_after = int(GameState.current_hp)
 	if damage_result.get("ok", false) and hp_after == hp_before - 5:
 		results.append("Damage Player: PASS")
 	else:
 		results.append("Damage Player: FAIL - HP %d -> %d (expected -5)" % [hp_before, hp_after])
 
-	var sword_before = gs.get_item_count("rusty_sword")
-	var coin_before = gs.get_item_count("ancient_coin")
-	gs.add_item("rusty_sword", 1)
-	gs.add_item("ancient_coin", 5)
-	var sword_after = gs.get_item_count("rusty_sword")
-	var coin_after = gs.get_item_count("ancient_coin")
+	var sword_before = GameState.get_item_count("rusty_sword")
+	var coin_before = GameState.get_item_count("ancient_coin")
+	GameState.add_item("rusty_sword", 1)
+	GameState.add_item("ancient_coin", 5)
+	var sword_after = GameState.get_item_count("rusty_sword")
+	var coin_after = GameState.get_item_count("ancient_coin")
 	if sword_after > sword_before and coin_after > coin_before:
 		results.append("Chest Loot Added: PASS")
 	else:
 		results.append("Chest Loot Added: FAIL - sword %d->%d, coin %d->%d" % [sword_before, sword_after, coin_before, coin_after])
 
-	gs.equip_item("rusty_sword")
-	var main_hand = gs.equipment.get("main_hand", "")
+	GameState.equip_item("rusty_sword")
+	var main_hand = GameState.equipment.get("main_hand", "")
 	if main_hand == "rusty_sword":
 		results.append("Equip Rusty Sword: PASS")
 	else:
 		results.append("Equip Rusty Sword: FAIL - main_hand=%s" % main_hand)
 
-	var hatchet_bonus = int(gs.get_item_definition("starter_hatchet").get("damage_bonus", 0))
-	var sword_bonus = gs.get_weapon_damage_bonus()
+	var hatchet_bonus = int(GameState.get_item_definition("starter_hatchet").get("damage_bonus", 0))
+	var sword_bonus = GameState.get_weapon_damage_bonus()
 	if sword_bonus > hatchet_bonus:
 		results.append("Weapon Bonus Increased: PASS")
 	else:

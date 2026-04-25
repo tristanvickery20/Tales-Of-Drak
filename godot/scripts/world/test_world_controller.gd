@@ -15,13 +15,9 @@ const DUNGEON_INTERACT_RANGE = 3.4
 @onready var dungeon_portal = get_node_or_null("DungeonPortal")
 @onready var hud = get_node_or_null("DebugHud")
 
-var gs = null
-
 
 func _ready():
-	gs = _get_game_state()
-	if gs != null and gs.has_method("ensure_runtime_state"):
-		gs.ensure_runtime_state()
+	GameState.ensure_runtime_state()
 	_connect_hud_signals()
 	_update_hud()
 	_hud_result("Entered world as %s." % _character_summary())
@@ -91,26 +87,20 @@ func _on_hud_craft_recipe_requested(recipe):
 
 
 func _craft_recipe(recipe):
-	var result = gs.craft_recipe(recipe)
+	var result = GameState.craft_recipe(recipe)
 	_hud_result(str(result.get("message", "Craft result.")))
 	_update_hud()
 
 
 func _on_hud_use_item_requested(item_id):
-	if gs != null and gs.has_method("use_item"):
-		var result = gs.use_item(str(item_id))
-		_hud_result(str(result.get("message", "Used item.")))
-	else:
-		_hud_result("Use item unavailable.")
+	var result = GameState.use_item(str(item_id))
+	_hud_result(str(result.get("message", "Used item.")))
 	_update_hud()
 
 
 func _on_hud_equip_item_requested(item_id):
-	if gs != null and gs.has_method("equip_item"):
-		var result = gs.equip_item(str(item_id))
-		_hud_result(str(result.get("message", "Equip result.")))
-	else:
-		_hud_result("Cannot equip %s." % _item_name(str(item_id)))
+	var result = GameState.equip_item(str(item_id))
+	_hud_result(str(result.get("message", "Equip result.")))
 	_update_hud()
 
 
@@ -165,66 +155,46 @@ func _hud_result(text):
 
 
 func _current_hp():
-	return int(gs.current_hp) if gs != null and "current_hp" in gs else 24
+	return int(GameState.current_hp)
 
 func _max_hp():
-	return int(gs.max_hp) if gs != null and "max_hp" in gs else 24
+	return int(GameState.max_hp)
 
 func _level():
-	return int(gs.level) if gs != null and "level" in gs else 1
+	return int(GameState.level)
 
 func _xp():
-	return int(gs.xp) if gs != null and "xp" in gs else 0
+	return int(GameState.xp)
 
 func _xp_to_next():
-	return int(gs.xp_to_next) if gs != null and "xp_to_next" in gs else 100
+	return int(GameState.xp_to_next)
 
 func _character_name():
-	return str(gs.character_name) if gs != null and "character_name" in gs else "Adventurer"
+	return str(GameState.character_name)
 
 func _species_name():
-	return str(gs.species_name) if gs != null and "species_name" in gs else "Human"
+	return str(GameState.species_name)
 
 func _class_name():
-	return str(gs.class_name) if gs != null and "class_name" in gs else "Fighter"
+	return str(GameState.class_name)
 
 func _character_summary():
-	if gs != null and gs.has_method("get_character_summary"):
-		return str(gs.get_character_summary())
-	return "%s - Level %d %s %s" % [_character_name(), _level(), _species_name(), _class_name()]
+	return str(GameState.get_character_summary())
 
 func _inventory_lines():
-	if gs != null and gs.has_method("get_inventory_lines"):
-		return gs.get_inventory_lines()
-	return PackedStringArray(["starter_hatchet x1", "torch_kit x1", "weathered_timber x10"])
+	return GameState.get_inventory_lines()
 
 func _character_view_lines():
-	if gs != null and gs.has_method("get_character_view_lines"):
-		return gs.get_character_view_lines()
-	return PackedStringArray([_character_summary(), "HP: %d / %d" % [_current_hp(), _max_hp()], "XP: %d / %d" % [_xp(), _xp_to_next()], "Main hand: Starter Hatchet"])
+	return GameState.get_character_view_lines()
 
 func _item_count(item_id):
-	if gs != null and gs.has_method("get_item_count"):
-		return int(gs.get_item_count(str(item_id)))
-	if str(item_id) == "weathered_timber": return 10
-	if str(item_id) == "starter_hatchet": return 1
-	if str(item_id) == "torch_kit": return 1
-	return 0
+	return int(GameState.get_item_count(str(item_id)))
 
 func _item_name(item_id):
-	if gs != null and gs.has_method("get_item_name"):
-		return str(gs.get_item_name(str(item_id)))
-	return str(item_id).replace("_", " ").capitalize()
+	return str(GameState.get_item_name(str(item_id)))
 
 func _add_item(item_id, qty):
-	if gs != null and gs.has_method("add_item"):
-		gs.add_item(str(item_id), int(qty))
+	GameState.add_item(str(item_id), int(qty))
 
 func _remove_item(item_id, qty):
-	if gs != null and gs.has_method("remove_item"):
-		gs.remove_item(str(item_id), int(qty))
-
-func _get_game_state():
-	if Engine.has_singleton("GameState"):
-		return Engine.get_singleton("GameState")
-	return get_node_or_null("/root/GameState")
+	GameState.remove_item(str(item_id), int(qty))
