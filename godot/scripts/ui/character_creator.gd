@@ -149,6 +149,8 @@ func _format_stats(stats: Dictionary) -> String:
 
 
 func _start_adventure() -> void:
+	start_button.disabled = true
+	start_button.text = "Loading..."
 	var species: Dictionary = SPECIES_OPTIONS[selected_species_index]
 	var clazz: Dictionary = CLASS_OPTIONS[selected_class_index]
 	var selection := {
@@ -162,4 +164,5 @@ func _start_adventure() -> void:
 	}
 	if GameState != null:
 		GameState.set_character(selection)
+	await get_tree().process_frame
 	get_tree().change_scene_to_file(TEST_WORLD_SCENE)
