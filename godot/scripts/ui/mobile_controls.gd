@@ -158,9 +158,14 @@ func _add_hotbar_slot(parent: Node, label: String, action: StringName, slot_numb
 	btn.tooltip_text = label
 	btn.modulate = _button_tint(action, primary)
 	btn.add_theme_font_size_override("font_size", font_size)
-	btn.button_down.connect(func() -> void: Input.action_press(action))
-	btn.button_up.connect(func() -> void: Input.action_release(action))
+	btn.pressed.connect(func() -> void:
+		Input.action_press(action)
+		call_deferred("_release_action", action)
+	)
 	parent.add_child(btn)
+
+func _release_action(action: StringName) -> void:
+	Input.action_release(action)
 
 
 func _format_button_text(label: String, slot_number: String) -> String:
