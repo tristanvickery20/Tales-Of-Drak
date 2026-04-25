@@ -1,0 +1,1194 @@
+TALES OF DRAK — MASTER PHASE ROADMAP FOR OPENCODE
+
+You are working in the Tales-Of-Drak repo.
+
+The user is iPhone-only and not a coder. You are the coding agent. Do not expect the user to manually code, inspect Godot editor errors, or use a desktop PC. The game must be testable through Godot Web Preview on iPhone landscape.
+
+DO NOT modify:
+.github/workflows/web-preview.yml
+
+Unless explicitly told otherwise:
+- Do not add heavy assets.
+- Do not redesign working UI unless required to make it functional.
+- Do not randomly remove existing systems.
+- Do not change the GitHub Actions workflow.
+- Do not force push.
+- Do not reset hard.
+- Do not delete files unless clearly obsolete and explained.
+- Do not skip validation.
+- Do not work on future phases unless the user explicitly says to execute that phase.
+
+====================================================
+NORTH STAR
+====================================================
+
+Tales of Drak is a custom-world, D&D 5e/SRD-inspired, Skyrim-style third-person fantasy sandbox RPG with:
+
+- D&D 5e/SRD-style rules brain
+- Skyrim-style third-person open-world exploration
+- ARK-style gathering, crafting, stations, and building
+- SWTOR-style readable live combat HUD and hotbar
+- BG3-style character sheet, inventory, and equipment depth
+- live action combat
+- dungeons
+- quests
+- companions
+- tameable creatures
+- housing
+- markets
+- private co-op multiplayer later for friends/family
+
+This is not an MMO first.
+This is not a random hotbar prototype.
+This is a private fantasy sandbox RPG.
+
+====================================================
+CORE LOOP
+====================================================
+
+Create character
+→ enter world
+→ gather resources
+→ craft items
+→ equip gear
+→ enter dungeon
+→ fight enemy
+→ take damage
+→ defeat enemy
+→ gain XP
+→ open chest
+→ receive loot
+→ equip loot
+→ return to world
+→ see progress persist
+→ expand through quests, crafting, housing, markets, companions, creatures, and private co-op later
+
+====================================================
+MASTER ARCHITECTURE RULE
+====================================================
+
+GameState is the single source of truth.
+
+GameState owns:
+- character name
+- species/race
+- class
+- subclass
+- ability scores later
+- HP
+- max HP
+- XP
+- level
+- XP to next level
+- inventory
+- equipment
+- item definitions
+- crafting recipes
+- action log
+- last action result
+
+HUD displays GameState.
+HUD buttons call GameState actions.
+WorldController handles only world interactions.
+DungeonController handles only dungeon interactions.
+
+No duplicated inventory mutation logic outside GameState.
+No duplicated HP mutation logic outside GameState.
+No duplicated XP mutation logic outside GameState.
+No duplicated craft/use/equip logic outside GameState.
+
+If a system breaks, fix the architecture instead of adding patches everywhere.
+
+====================================================
+AGENT WORKFLOW RULES
+====================================================
+
+When asked to execute a phase:
+
+1. Inspect the repo first.
+2. Identify relevant files.
+3. Report a short plan before editing.
+4. Make focused changes only for the requested phase.
+5. Run validation.
+6. Confirm `.github/workflows/web-preview.yml` is untouched.
+7. Run `git status`.
+8. Commit only if validation passes.
+9. Push only after a clean successful commit.
+10. Report changed files, validation result, workflow status, and iPhone test checklist.
+
+Always run this validation if present:
+
+python tools/validate_character_framework.py
+
+Also use grep/search checks relevant to the phase.
+
+====================================================
+PHASE 1 — STABILIZE THE VERTICAL SLICE
+====================================================
+
+PHASE 1 GOAL:
+Make the current vertical slice reliable.
+
+The player must be able to:
+1. Create/start character
+2. Enter world
+3. Open inventory
+4. See backpack items
+5. Gather Weathered Timber
+6. Craft Simple Bandage
+7. See material consumed and crafted item added
+8. Use Simple Bandage if hurt
+9. Equip Starter Hatchet / Rusty Sword
+10. See Character tab update equipment and weapon bonus
+11. Enter dungeon
+12. See enemy HP above enemy as small text like 30/30
+13. Enemy attacks reduce player HP
+14. Player attacks reduce enemy HP
+15. Enemy dies
+16. Player gains XP
+17. Chest unlocks
+18. Chest adds Rusty Sword and Ancient Coins to backpack
+19. Rusty Sword can be equipped
+20. Equipped weapon increases attack damage
+21. Exit dungeon back to world
+22. HP / XP / inventory / equipment persist between world and dungeon
+
+THIS IS NOT A GRAPHICS PASS.
+THIS IS NOT A NEW FEATURE PASS.
+THIS IS A STABILIZATION PASS.
+
+Do not add new races/classes/enemies/maps.
+Do not add multiplayer.
+Do not add quests.
+Do not add housing.
+Do not add markets.
+Do not add companions.
+Do not touch workflow.
+
+----------------------------------------------------
+PHASE 1 FILES LIKELY INVOLVED
+----------------------------------------------------
+
+- godot/scripts/systems/game_state.gd
+- godot/scripts/ui/debug_hud.gd
+- godot/scripts/world/test_world_controller.gd
+- godot/scripts/world/dungeon_shell_controller.gd
+- godot/project.godot if input actions/autoloads need verification
+
+----------------------------------------------------
+PHASE 1 PART A — GAMESTATE ACTION ROUTER
+----------------------------------------------------
+
+In `godot/scripts/systems/game_state.gd`, add/verify:
+
+Variables:
+- action_log
+- last_action_result
+
+Methods:
+- log_action(text)
+- get_debug_lines()
+- craft_recipe(recipe)
+- use_item(item_id)
+- equip_item(item_id)
+- damage_player(amount, source = "damage")
+- add_item(item_id, quantity = 1)
+- remove_item(item_id, quantity = 1)
+- add_xp(amount)
+- get_inventory_lines()
+- get_character_view_lines()
+- get_weapon_damage_bonus()
+- get_item_definition(item_id)
+- get_item_name(item_id)
+- get_item_icon(item_id)
+
+Every action method must:
+- return `{ "ok": true/false, "message": "..." }`
+- log what happened
+- emit runtime_state_changed after mutations
+- log exact failure reason when it fails
+
+Required starter inventory:
+- starter_hatchet x1
+- weathered_timber x10
+- torch_kit x1
+
+Required starting equipment:
+- main_hand = starter_hatchet
+- armor = plain_clothes
+
+Required item definitions:
+- starter_hatchet
+  - name: Starter Hatchet
+  - icon: H
+  - type: tool
+  - slot: main_hand
+  - equippable: true
+  - damage_bonus: 1
+
+- weathered_timber
+  - name: Weathered Timber
+  - icon: W
+  - type: resource
+
+- torch_kit
+  - name: Torch Kit
+  - icon: T
+  - type: utility
+
+- starter_bandage
+  - name: Simple Bandage
+  - icon: +
+  - type: consumable
+  - usable: true
+  - heal_amount: 8
+
+- rusty_sword
+  - name: Rusty Sword
+  - icon: S
+  - type: weapon
+  - slot: main_hand
+  - equippable: true
+  - damage_bonus: 4
+
+- ancient_coin
+  - name: Ancient Coin
+  - icon: O
+  - type: currency
+
+- plain_clothes
+  - name: Plain Clothes
+  - icon: A
+  - type: armor
+  - slot: armor
+  - equippable: true
+  - armor_bonus: 0
+
+Required recipe definitions:
+- craft_torch_kit
+  - requirements: weathered_timber x1
+  - output: torch_kit x2
+
+- timber_foundation
+  - requirements: weathered_timber x8
+  - output: timber_foundation x1
+
+- starter_bandage
+  - requirements: weathered_timber x2
+  - output: starter_bandage x1
+
+- camp_marker
+  - requirements: weathered_timber x5, torch_kit x1
+  - output: camp_marker x1
+
+craft_recipe(recipe):
+- accepts a recipe dictionary
+- checks requirements
+- if missing material, return failure and log exact reason:
+  CRAFT failed: need Weathered Timber 0/2
+- if successful:
+  - remove materials
+  - add output item
+  - emit runtime_state_changed
+  - log:
+    CRAFT success: Simple Bandage -> Simple Bandage x1
+
+use_item(item_id):
+- check item exists
+- check usable
+- starter_bandage heals HP
+- using bandage consumes 1 bandage
+- refresh HP and inventory
+
+equip_item(item_id):
+- check item exists in inventory
+- check equippable
+- check valid slot
+- set equipment[slot] = item_id
+- emit runtime_state_changed
+- log:
+  EQUIP success: Rusty Sword -> main_hand
+
+damage_player(amount, source):
+- subtract HP
+- clamp HP between 0 and max_hp
+- emit runtime_state_changed
+- log:
+  DAMAGE enemy: 24 -> 19 (-5)
+
+add_xp(amount):
+- add XP
+- support level up if XP >= xp_to_next
+- emit runtime_state_changed
+- log XP result
+
+get_inventory_lines():
+- return every inventory item with qty > 0
+- chest loot and crafted items must appear immediately
+
+get_character_view_lines():
+- show:
+  - character summary
+  - HP
+  - XP
+  - AC
+  - main hand
+  - off hand
+  - armor
+  - weapon damage bonus
+
+get_debug_lines():
+- show:
+  - GameState OK
+  - current scene path
+  - HP
+  - XP
+  - inventory dump
+  - equipment dump
+  - last action result
+  - last 10 action log entries
+
+----------------------------------------------------
+PHASE 1 PART B — HUD / INVENTORY / DEBUG CONSOLE
+----------------------------------------------------
+
+In `godot/scripts/ui/debug_hud.gd`, keep the existing inventory look as much as possible.
+
+Required HUD:
+- red HP bar top-left
+- blue XP bar under HP bar
+- INV button
+- DBG button
+- prompt text
+- last result text
+
+Inventory must have:
+- Character tab
+- Backpack tab
+- Crafting tab
+
+Backpack tab:
+- item grid
+- item icons/quantities
+- selected item details
+- USE button if usable
+- EQUIP button if equippable
+
+Crafting tab:
+- icon-only recipe grid
+- selected recipe details
+- owned / required materials
+- CRAFT button
+- if materials missing, CRAFT disabled or shows MISSING MATERIALS
+- if materials available, CRAFT enabled
+
+Character tab:
+- HP
+- XP
+- AC
+- equipped main hand
+- equipped armor
+- weapon damage bonus
+
+HUD must not manually mutate inventory/equipment/HP/XP.
+
+When CRAFT is tapped:
+- call GameState.craft_recipe(selected_recipe)
+- show returned message in Last
+- refresh HUD from GameState
+
+When USE is tapped:
+- call GameState.use_item(selected_item_id)
+- show returned message in Last
+- refresh HUD from GameState
+
+When EQUIP is tapped:
+- call GameState.equip_item(selected_item_id)
+- show returned message in Last
+- refresh HUD from GameState
+
+DBG button:
+- visible near INV button
+- opens iPhone-readable debug panel
+- title: Tales of Drak Debug Console
+- Refresh button
+- Close button
+- shows GameState.get_debug_lines()
+- also shows selected item index and selected recipe index
+
+The debug console is mandatory because the user is iPhone-only.
+
+----------------------------------------------------
+PHASE 1 PART C — WORLD CONTROLLER
+----------------------------------------------------
+
+In `godot/scripts/world/test_world_controller.gd`:
+
+World controller should only handle:
+- gather node
+- dungeon portal
+- build placement marker
+- calling GameState actions
+- refreshing HUD
+
+Gathering:
+- when player uses gather node:
+  GameState.add_item("weathered_timber", 3)
+- HUD updates immediately
+- Last message shows result
+
+Quick craft:
+- if quick craft exists, call GameState.craft_recipe(recipe)
+- do not manually remove/add items in controller
+
+Build placement:
+- call GameState.remove_item("weathered_timber", 8)
+- if successful, place placeholder
+- if not enough material, show failure
+- do not manually mutate inventory
+
+Portal:
+- USE near dungeon portal enters dungeon
+- this must keep working
+
+On _ready:
+- GameState.ensure_runtime_state()
+- connect GameState.runtime_state_changed to HUD refresh if needed
+- push HP/XP/inventory/character to HUD
+
+----------------------------------------------------
+PHASE 1 PART D — DUNGEON CONTROLLER
+----------------------------------------------------
+
+In `godot/scripts/world/dungeon_shell_controller.gd`:
+
+Dungeon controller should only handle:
+- enemy movement/attack
+- enemy HP
+- chest interaction
+- exit portal
+- calling GameState actions
+- refreshing HUD
+
+Enemy:
+- enemy HP starts at 30
+- enemy HP label appears directly above enemy head
+- label text only:
+  30/30
+  22/30
+- label small enough to not block screen
+- reduce Label3D font_size / pixel_size if needed
+
+Enemy damage to player:
+- when enemy attacks player:
+  GameState.damage_player(ENEMY_TOUCH_DAMAGE, "enemy")
+- HP bar drops immediately
+- Character tab reflects HP change
+- Debug log shows damage action
+
+Player attack:
+- basic attack damage = base damage + GameState.get_weapon_damage_bonus()
+- equipped Rusty Sword causes higher damage than Starter Hatchet
+- enemy HP label updates after hit
+
+Enemy defeat:
+- enemy becomes defeated
+- enemy gives XP through:
+  GameState.add_xp(ENEMY_XP_REWARD)
+- chest unlocks
+
+Chest:
+- locked until enemy defeated
+- when opened:
+  GameState.add_item("rusty_sword", 1)
+  GameState.add_item("ancient_coin", 5)
+- backpack shows Rusty Sword and Ancient Coins after refresh
+- debug log shows add item actions
+
+Exit portal:
+- USE near exit portal returns to world
+- HP / XP / inventory / equipment persist after returning
+
+----------------------------------------------------
+PHASE 1 ACCEPTANCE TEST
+----------------------------------------------------
+
+After implementation, this iPhone test must pass:
+
+1. Open game
+2. Start character
+3. HP bar shows real HP, not 1/1
+4. XP bar shows LV 1 XP 0/100
+5. Tap DBG
+6. Debug console says GameState OK
+7. Open INV → Backpack
+8. Backpack shows Starter Hatchet, Torch Kit, Weathered Timber
+9. Select Starter Hatchet
+10. Details show name/type/description
+11. EQUIP button is visible
+12. Tap EQUIP
+13. Character tab shows Starter Hatchet as main hand
+14. Go Crafting
+15. Select Simple Bandage
+16. Requirements show Weathered Timber current count / 2
+17. Tap CRAFT
+18. Weathered Timber decreases by 2
+19. Simple Bandage appears in Backpack
+20. If hurt, select Simple Bandage and tap USE
+21. HP increases and bandage quantity decreases
+22. Walk to portal
+23. USE enters dungeon
+24. Dungeon HP/XP/inventory are still correct
+25. Enemy HP above enemy reads 30/30 and is small
+26. Let enemy hit player
+27. HP decreases
+28. Debug console shows DAMAGE enemy
+29. Attack enemy
+30. Enemy HP decreases
+31. Kill enemy
+32. XP increases
+33. Chest unlocks
+34. Open chest
+35. Backpack shows Rusty Sword and Ancient Coins
+36. Select Rusty Sword
+37. Tap EQUIP
+38. Character tab shows Rusty Sword as main hand
+39. Weapon damage bonus increases
+40. Exit dungeon
+41. Back in world, inventory/equipment/HP/XP persist
+
+----------------------------------------------------
+PHASE 1 VALIDATION
+----------------------------------------------------
+
+Run:
+python tools/validate_character_framework.py
+
+Also check:
+- `.github/workflows/web-preview.yml` unchanged
+- no syntax errors
+- no duplicate manual inventory mutation logic outside GameState
+- no duplicate manual HP mutation logic outside GameState
+- HUD CRAFT calls GameState.craft_recipe
+- HUD USE calls GameState.use_item
+- HUD EQUIP calls GameState.equip_item
+- Dungeon enemy damage calls GameState.damage_player
+- Dungeon chest loot calls GameState.add_item
+- Dungeon enemy XP calls GameState.add_xp
+- World gathering calls GameState.add_item
+- World build placement calls GameState.remove_item
+
+Commit message:
+Finish Phase 1 vertical slice stabilization
+
+====================================================
+PHASE 2 — MAKE IT ACTUALLY D&D 5E-LIKE
+====================================================
+
+PHASE 2 GOAL:
+Turn the current prototype into a 5E/SRD-inspired rules-driven RPG foundation.
+
+Do not use protected D&D settings, lore, monster names, spell text, branding, or copyrighted content.
+Use 5E/SRD-compatible mechanics as inspiration and build a custom world.
+
+Core systems to add:
+- ability scores
+- modifiers
+- proficiency bonus
+- armor class
+- attack rolls
+- crits/misses
+- saving throws
+- skills
+- class resources
+- spell/cantrip basics
+- level-based progression
+
+----------------------------------------------------
+PHASE 2.1 — ABILITY SCORES
+----------------------------------------------------
+
+Add to GameState/character data:
+- STR
+- DEX
+- CON
+- INT
+- WIS
+- CHA
+
+Add:
+- modifier calculation
+- ability score display in Character tab
+- character creation defaults by class/species
+
+Formula:
+modifier = floor((score - 10) / 2)
+
+Use ability modifiers in later combat/crafting/skills.
+
+----------------------------------------------------
+PHASE 2.2 — PROFICIENCY BONUS
+----------------------------------------------------
+
+Add proficiency bonus by level.
+
+Prototype:
+- levels 1–4: +2
+- 5–8: +3
+- 9–12: +4
+- 13–16: +5
+- 17–20: +6
+
+Show in Character tab.
+
+----------------------------------------------------
+PHASE 2.3 — AC / ATTACK ROLL / HIT LOGIC
+----------------------------------------------------
+
+Live attack button should trigger a 5E-style roll behind the scenes.
+
+Basic attack flow:
+- roll d20
+- add ability modifier
+- add proficiency if proficient
+- compare against enemy AC
+- natural 20 crit
+- natural 1 miss
+- on hit, roll/apply damage
+
+Debug log must show:
+Attack roll: d20 14 + 5 = 19 vs AC 12 HIT
+Damage: 1d8 + 3 = 8
+
+Keep combat live action, but rules are calculated underneath.
+
+----------------------------------------------------
+PHASE 2.4 — CLASS BASICS
+----------------------------------------------------
+
+Initial classes:
+- Fighter
+- Warlock
+- Wizard
+
+Fighter:
+- higher HP
+- martial weapon focus
+- Second Wind prototype
+- Action Surge later
+
+Warlock:
+- eldritch-style ranged cantrip
+- pact resource later
+- medium HP
+
+Wizard:
+- low HP
+- cantrip
+- spell slot placeholder
+- stronger spell damage later
+
+Only implement basic class identity first. Do not add all subclasses yet.
+
+----------------------------------------------------
+PHASE 2.5 — SAVING THROWS / CONDITIONS FOUNDATION
+----------------------------------------------------
+
+Add data structure for:
+- saving throw proficiencies
+- conditions
+- condition display
+
+Conditions can be placeholder:
+- poisoned
+- stunned
+- burning
+- slowed
+
+Do not overbuild effects yet.
+
+----------------------------------------------------
+PHASE 2 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- see ability scores
+- see modifiers
+- see proficiency bonus
+- attack enemy with hit/miss/crit log
+- see AC matter
+- see class affect HP and ability
+- use one class feature
+- debug console shows roll math
+
+Commit message:
+Add Phase 2 DnD rules foundation
+
+====================================================
+PHASE 3 — EXPAND SANDBOX GATHERING / CRAFTING / BUILDING
+====================================================
+
+PHASE 3 GOAL:
+Turn the simple resource loop into an ARK-style fantasy sandbox loop.
+
+Do not add massive world yet.
+Keep it lightweight.
+
+----------------------------------------------------
+PHASE 3.1 — RESOURCE NODES
+----------------------------------------------------
+
+Add resource node types:
+- timber
+- stone
+- herbs
+- ore placeholder
+- hide placeholder
+
+Each node should have:
+- resource type
+- yield amount
+- required/preferred tool
+- respawn placeholder
+- action log
+
+Gathering should call GameState.add_item.
+
+----------------------------------------------------
+PHASE 3.2 — TOOL-BASED GATHERING
+----------------------------------------------------
+
+Tools:
+- hatchet for timber
+- pickaxe for stone/ore
+- knife for hide
+- sickle for herbs
+
+Better tools can increase yield later.
+
+Use 5E-style checks later:
+tool proficiency + ability modifier + item quality.
+
+----------------------------------------------------
+PHASE 3.3 — CRAFTING STATIONS
+----------------------------------------------------
+
+Add station categories:
+- campfire
+- workbench
+- forge
+- alchemy table
+- enchanting table placeholder
+
+Rules:
+- some recipes craft from inventory
+- some require station
+- station UI can reuse crafting tab
+- recipes remain data-driven
+
+----------------------------------------------------
+PHASE 3.4 — BASIC BUILDING PIECES
+----------------------------------------------------
+
+Add:
+- floor/foundation
+- wall
+- door placeholder
+- storage chest
+- camp marker
+
+Building should consume materials through GameState.remove_item.
+
+No huge base-building yet.
+
+----------------------------------------------------
+PHASE 3 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- gather different resource types
+- see resources in inventory
+- craft at least one station recipe
+- place one building piece
+- storage chest placeholder exists
+- all material changes persist
+
+Commit message:
+Add Phase 3 sandbox gathering and building foundation
+
+====================================================
+PHASE 4 — WORLD CONTENT: NPCS / QUESTS / MARKETS / HOUSING
+====================================================
+
+PHASE 4 GOAL:
+Make the game feel like an RPG world instead of test rooms.
+
+----------------------------------------------------
+PHASE 4.1 — FIRST HUB / CAMP / VILLAGE
+----------------------------------------------------
+
+Add a small readable hub:
+- spawn area
+- NPC placeholder
+- vendor placeholder
+- quest board placeholder
+- crafting station area
+- road/portal to dungeon
+- nearby gathering area
+
+Keep graybox/lightweight if needed.
+
+----------------------------------------------------
+PHASE 4.2 — DIALOGUE FOUNDATION
+----------------------------------------------------
+
+Add simple dialogue UI:
+- NPC name
+- dialogue text
+- player response buttons
+- close button
+
+No big branching story yet.
+
+----------------------------------------------------
+PHASE 4.3 — QUEST SYSTEM
+----------------------------------------------------
+
+Quest data:
+- quest id
+- title
+- description
+- objectives
+- progress
+- reward
+- completion state
+
+First quests:
+- gather timber
+- craft Simple Bandage
+- defeat dungeon enemy
+- open first chest
+- return to NPC
+
+Quest progress should update from GameState actions.
+
+----------------------------------------------------
+PHASE 4.4 — VENDOR / MARKET
+----------------------------------------------------
+
+Add basic market UI:
+- buy tab
+- sell tab
+- vendor inventory
+- player inventory
+- currency
+- item price
+- buy/sell result message
+
+Ancient Coins can be first currency.
+
+----------------------------------------------------
+PHASE 4.5 — HOUSING FOUNDATION
+----------------------------------------------------
+
+Add:
+- purchasable house shell or plot
+- simple bed/rest point
+- storage chest
+- workbench
+- upgrade placeholder
+
+Do not build full Hearthfire/ARK base system yet.
+
+----------------------------------------------------
+PHASE 4 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- talk to NPC
+- accept quest
+- complete simple objective
+- receive reward
+- buy/sell item
+- see currency change
+- access basic house/storage/workbench
+
+Commit message:
+Add Phase 4 RPG world content foundation
+
+====================================================
+PHASE 5 — COMPANIONS AND TAMEABLE CREATURES
+====================================================
+
+PHASE 5 GOAL:
+Add party depth: humanoid companions and tameable creatures.
+
+----------------------------------------------------
+PHASE 5.1 — COMPANION PROTOTYPE
+----------------------------------------------------
+
+Add one humanoid companion placeholder.
+
+Companion can:
+- follow player
+- have HP
+- attack enemy
+- be dismissed later
+- show basic status
+
+Do not overbuild dialogue/loyalty yet.
+
+----------------------------------------------------
+PHASE 5.2 — COMPANION COMBAT
+----------------------------------------------------
+
+Companion should:
+- detect enemy
+- attack enemy
+- take damage later
+- not block player movement too badly
+
+Use GameState or future PartyState carefully.
+
+----------------------------------------------------
+PHASE 5.3 — COMPANION INVENTORY / UTILITY
+----------------------------------------------------
+
+Add basic:
+- companion carry capacity placeholder
+- companion status panel
+- future crew-skill style gathering/crafting hooks
+
+Do not add full automation yet.
+
+----------------------------------------------------
+PHASE 5.4 — TAMEABLE CREATURE PROTOTYPE
+----------------------------------------------------
+
+Add one tameable creature placeholder.
+
+Taming loop:
+- approach/weaken/feed
+- tame progress
+- creature follows player
+- creature can help in combat
+
+Start with one simple wolf/boar-style placeholder, custom named.
+
+----------------------------------------------------
+PHASE 5 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- recruit companion
+- companion follows
+- companion attacks enemy
+- tame one creature
+- tamed creature follows
+- tamed creature helps in combat
+
+Commit message:
+Add Phase 5 companions and tameable creature foundation
+
+====================================================
+PHASE 6 — MAP EXPANSION
+====================================================
+
+PHASE 6 GOAL:
+Expand from test scenes into a small but real connected fantasy world.
+
+Do not make a giant map before the loop is stable.
+
+----------------------------------------------------
+PHASE 6.1 — LARGER OUTDOOR ZONE
+----------------------------------------------------
+
+Create a larger lightweight graybox outdoor zone:
+- roads
+- trees
+- rocks
+- herbs
+- enemy camp
+- cave entrance
+- town/hub connection
+- house plot
+
+Keep web preview performance safe.
+
+----------------------------------------------------
+PHASE 6.2 — ENEMY CAMPS
+----------------------------------------------------
+
+Add small enemy camp:
+- 2–3 enemies
+- chest/reward
+- resource nearby
+- quest target support
+
+----------------------------------------------------
+PHASE 6.3 — CAVES / DUNGEONS
+----------------------------------------------------
+
+Add more dungeon entrances:
+- cave
+- ruin
+- cellar
+
+Reuse existing dungeon logic but make it data-driven enough for multiple dungeons.
+
+----------------------------------------------------
+PHASE 6.4 — TOWN AREA
+----------------------------------------------------
+
+Add simple town zone:
+- merchant
+- quest NPC
+- crafting area
+- housing entrance
+- road out
+
+----------------------------------------------------
+PHASE 6 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- travel between hub, wilderness, cave/dungeon, town/house plot
+- gather resources in world
+- encounter enemy camp
+- enter dungeon
+- return with loot
+- performance remains acceptable on iPhone web preview
+
+Commit message:
+Add Phase 6 expanded world foundation
+
+====================================================
+PHASE 7 — PRIVATE MULTIPLAYER PREPARATION
+====================================================
+
+PHASE 7 GOAL:
+Prepare for small private co-op for friends/family.
+
+This is not an MMO.
+This should be 2–6 players eventually.
+
+Do not build multiplayer before single-player loop works.
+
+----------------------------------------------------
+PHASE 7.1 — STATE SEPARATION
+----------------------------------------------------
+
+Separate concepts:
+- PlayerState
+- WorldState
+- PartyState
+- SaveState
+
+Avoid hardcoding only one player everywhere.
+
+GameState can remain prototype wrapper, but plan for per-player data.
+
+----------------------------------------------------
+PHASE 7.2 — SAVE / LOAD SYSTEM
+----------------------------------------------------
+
+Add save/load:
+- character
+- HP
+- XP
+- level
+- inventory
+- equipment
+- quests
+- unlocked content
+- placed structures later
+
+For web prototype:
+- browser local storage is acceptable first
+
+Long-term:
+- PC file save
+- multiplayer server save later
+
+----------------------------------------------------
+PHASE 7.3 — BASIC NETWORK ARCHITECTURE PLAN
+----------------------------------------------------
+
+Do not overbuild.
+Add docs or scaffolding for:
+- host/join
+- player id
+- synced movement
+- synced enemies
+- shared dungeon
+- party HUD
+- loot rules
+
+Only implement if current Godot project supports it cleanly.
+
+----------------------------------------------------
+PHASE 7.4 — PRIVATE SESSION PROTOTYPE
+----------------------------------------------------
+
+Eventually:
+- host private session
+- join private session
+- 2 players visible
+- shared dungeon
+- enemy sync
+- basic party HUD
+
+Keep this late.
+
+----------------------------------------------------
+PHASE 7 ACCEPTANCE TEST
+----------------------------------------------------
+
+Player can:
+- save/load
+- game architecture separates player/world state
+- future multiplayer has a clear path
+- optional prototype shows two players if feasible
+
+Commit message:
+Add Phase 7 save and multiplayer preparation foundation
+
+====================================================
+FINAL VERTICAL SLICE TARGET
+====================================================
+
+The first real “playable family/friends vertical slice” must include:
+
+- character creation
+- one hub
+- one gathering zone
+- one crafting loop
+- one dungeon
+- one enemy type
+- one loot chest
+- one vendor
+- one quest
+- basic equipment
+- HP/XP/leveling
+- save/load
+- readable HUD
+- stable inventory
+- debug console
+- web preview works
+- PC export path remains possible
+
+A friend/family member should be able to play without explanation:
+
+create character
+→ enter world
+→ gather materials
+→ craft item
+→ enter dungeon
+→ fight enemy
+→ take damage
+→ use item
+→ gain XP
+→ open chest
+→ equip loot
+→ return to town/world
+→ see progress saved

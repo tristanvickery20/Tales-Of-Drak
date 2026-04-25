@@ -20,6 +20,7 @@ const HEAVY_COOLDOWN = 3.0
 const CLASS_COOLDOWN = 6.0
 const GUARD_SECONDS = 2.0
 const GUARD_DAMAGE_MULTIPLIER = 0.5
+const FLASH_DURATION = 0.25
 const REWARD_ITEM_ID = "rusty_sword"
 const REWARD_COIN_ID = "ancient_coin"
 
@@ -40,6 +41,8 @@ var enemy_damage_timer = 0.0
 var heavy_timer = 0.0
 var class_timer = 0.0
 var guard_timer = 0.0
+var enemy_flash_timer = 0.0
+var player_flash_timer = 0.0
 var enemy_hp_label = null
 var last_prompt = ""
 
@@ -135,7 +138,11 @@ func _tick_timers(delta):
 	heavy_timer = max(0.0, heavy_timer - delta)
 	class_timer = max(0.0, class_timer - delta)
 	guard_timer = max(0.0, guard_timer - delta)
-	if player_mesh != null and guard_timer <= 0.0 and not player_defeated:
+	enemy_flash_timer = max(0.0, enemy_flash_timer - delta)
+	player_flash_timer = max(0.0, player_flash_timer - delta)
+	if enemy_flash_timer <= 0.0 and enemy_mesh != null and not enemy_defeated:
+		enemy_mesh.material_override = enemy_mat_default
+	if player_flash_timer <= 0.0 and player_mesh != null and not player_defeated and guard_timer <= 0.0:
 		player_mesh.material_override = player_mat_default
 
 func _update_enemy_ai(delta):
@@ -170,6 +177,7 @@ func _enemy_touch_damage():
 	GameState.damage_player(damage, "enemy")
 	if player_mesh != null:
 		player_mesh.material_override = player_mat_guard if guard_timer > 0.0 else player_mat_hit
+		player_flash_timer = FLASH_DURATION
 	player_defeated = GameState.current_hp <= 0
 	if player_defeated:
 		_hud_result("You were defeated. Use the exit portal to leave.")
@@ -204,6 +212,7 @@ func _attack_enemy(damage, label):
 	enemy_hp = max(0, enemy_hp - int(damage))
 	if enemy_mesh != null:
 		enemy_mesh.material_override = enemy_mat_hit
+		enemy_flash_timer = FLASH_DURATION
 	_update_enemy_hp_label()
 	if enemy_hp <= 0:
 		_enemy_defeated(label)

@@ -27,13 +27,13 @@ var action_log = PackedStringArray()
 var last_action_result = {"ok": true, "message": "GameState initialized."}
 
 var item_defs = {
-	"starter_hatchet": {"name":"Starter Hatchet","icon":"H","type":"tool","slot":"main_hand","description":"A rough hatchet. Useful for gathering and barely good enough as a weapon.","damage_bonus":1,"usable":false,"equippable":true},
+	"starter_hatchet": {"name":"Starter Hatchet","icon":"H","type":"tool / weapon","slot":"main_hand","description":"A rough hatchet. Useful for gathering and basic fighting.","damage_dice":"1d4","damage_bonus":1,"usable":false,"equippable":true},
 	"weathered_timber": {"name":"Weathered Timber","icon":"W","type":"resource","slot":"","description":"Old timber gathered from the world. Used for primitive crafting.","damage_bonus":0,"usable":false,"equippable":false},
 	"torch_kit": {"name":"Torch Kit","icon":"T","type":"utility","slot":"","description":"A simple torch kit for light and survival crafting chains.","damage_bonus":0,"usable":false,"equippable":false},
 	"timber_foundation": {"name":"Timber Foundation","icon":"F","type":"building","slot":"","description":"A primitive building foundation for the future housing/building system.","damage_bonus":0,"usable":false,"equippable":false},
 	"starter_bandage": {"name":"Simple Bandage","icon":"+","type":"consumable","slot":"","description":"A crude bandage. Restores a small amount of HP in the prototype.","damage_bonus":0,"heal_amount":8,"usable":true,"equippable":false},
 	"camp_marker": {"name":"Camp Marker","icon":"C","type":"utility","slot":"","description":"A placeholder camp object for future housing and rest systems.","damage_bonus":0,"usable":false,"equippable":false},
-	"rusty_sword": {"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","damage_bonus":4,"usable":false,"equippable":true},
+	"rusty_sword": {"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","damage_dice":"1d8","damage_bonus":4,"usable":false,"equippable":true},
 	"plain_clothes": {"name":"Plain Clothes","icon":"A","type":"armor","slot":"armor","description":"Basic starter clothing. No real protection yet.","armor_bonus":0,"usable":false,"equippable":true},
 	"ancient_coin": {"name":"Ancient Coin","icon":"O","type":"currency","slot":"","description":"A small coin from the dungeon. Used later for vendors and markets.","damage_bonus":0,"usable":false,"equippable":false},
 }
@@ -233,6 +233,11 @@ func get_weapon_damage_bonus():
 	if weapon_id == "": return 0
 	return int(get_item_definition(weapon_id).get("damage_bonus", 0))
 
+func get_weapon_damage_dice():
+	var weapon_id = get_equipped_item("main_hand")
+	if weapon_id == "": return ""
+	return str(get_item_definition(weapon_id).get("damage_dice", ""))
+
 func get_armor_class():
 	var armor_id = get_equipped_item("armor")
 	return 10 + int(get_item_definition(armor_id).get("armor_bonus", 0))
@@ -287,6 +292,9 @@ func get_character_view_lines():
 	lines.append("Main hand: %s" % _equipped_label("main_hand"))
 	lines.append("Off hand: %s" % _equipped_label("off_hand"))
 	lines.append("Armor: %s" % _equipped_label("armor"))
+	var weapon_dice = get_weapon_damage_dice()
+	if weapon_dice != "":
+		lines.append("Weapon damage: %s" % weapon_dice)
 	lines.append("Weapon damage bonus: +%d" % get_weapon_damage_bonus())
 	return lines
 

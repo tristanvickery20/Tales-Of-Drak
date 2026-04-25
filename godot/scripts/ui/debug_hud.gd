@@ -45,13 +45,13 @@ var character_lines = PackedStringArray()
 var inventory_counts = {}
 
 var item_defs = {
-	"starter_hatchet":{"name":"Starter Hatchet","icon":"H","type":"tool","slot":"main_hand","description":"A rough starter hatchet. Useful for gathering and basic fighting.","usable":false,"equippable":true},
+	"starter_hatchet":{"name":"Starter Hatchet","icon":"H","type":"tool / weapon","slot":"main_hand","description":"A rough starter hatchet. Useful for gathering and basic fighting.","damage_dice":"1d4","damage_bonus":1,"usable":false,"equippable":true},
 	"weathered_timber":{"name":"Weathered Timber","icon":"W","type":"resource","slot":"","description":"Old timber gathered from the world. Used for primitive crafting.","usable":false,"equippable":false},
 	"torch_kit":{"name":"Torch Kit","icon":"T","type":"utility","slot":"","description":"A simple torch kit for light and survival crafting chains.","usable":false,"equippable":false},
 	"timber_foundation":{"name":"Timber Foundation","icon":"F","type":"building","slot":"","description":"A primitive building foundation for the future housing/building system.","usable":false,"equippable":false},
 	"starter_bandage":{"name":"Simple Bandage","icon":"+","type":"consumable","slot":"","description":"A crude bandage. Restores a small amount of HP.","usable":true,"equippable":false},
 	"camp_marker":{"name":"Camp Marker","icon":"C","type":"utility","slot":"","description":"A placeholder camp object for future housing and rest systems.","usable":false,"equippable":false},
-	"rusty_sword":{"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","usable":false,"equippable":true},
+	"rusty_sword":{"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","damage_dice":"1d8","damage_bonus":4,"usable":false,"equippable":true},
 	"plain_clothes":{"name":"Plain Clothes","icon":"A","type":"armor","slot":"armor","description":"Basic starter clothing. No real protection yet.","usable":false,"equippable":true},
 	"ancient_coin":{"name":"Ancient Coin","icon":"O","type":"currency","slot":"","description":"A small coin from the dungeon. Used later for vendors and markets.","usable":false,"equippable":false}
 }
@@ -74,10 +74,8 @@ func _ready():
 	_build_dbg_button()
 	_build_inventory_panel()
 	_build_debug_panel()
-	set_player_health(1, 1)
-	set_progression(1, 0, 100)
+	_refresh_from_gamestate()
 	_update_view()
-	call_deferred("_refresh_from_gamestate")
 
 func _refresh_from_gamestate():
 	if gs == null:
@@ -233,6 +231,11 @@ func _build_debug_panel():
 	close_btn.text = "Close"
 	close_btn.pressed.connect(_toggle_debug_panel)
 	dbg_top.add_child(close_btn)
+
+	var test_btn = Button.new()
+	test_btn.text = "RUN PHASE 1 TEST"
+	test_btn.pressed.connect(_run_phase1_test)
+	dbg_vbox.add_child(test_btn)
 
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -476,7 +479,14 @@ func _item_details():
 	if backpack_lines.is_empty(): return "BACKPACK\n\nNo items."
 	var id = str(_parse_line(backpack_lines[clamp(selected_item_index, 0, backpack_lines.size() - 1)]).get("item_id", ""))
 	var d = _item_def(id)
-	return "ITEM: %s\nType: %s\nQty: %d\n\n%s" % [str(d.get("name", id)).to_upper(), str(d.get("type", "unknown")), int(inventory_counts.get(id, 0)), str(d.get("description", "No description."))]
+	var text = "ITEM: %s\nType: %s\nQty: %d\n\n%s" % [str(d.get("name", id)).to_upper(), str(d.get("type", "unknown")), int(inventory_counts.get(id, 0)), str(d.get("description", "No description."))]
+	var dice = str(d.get("damage_dice", ""))
+	if dice != "":
+		text += "\nDamage: %s" % dice
+		var bonus = int(d.get("damage_bonus", 0))
+		if bonus > 0:
+			text += " +%d" % bonus
+	return text
 
 func _recipe_details():
 	var r = recipes[clamp(selected_recipe_index, 0, recipes.size() - 1)]
@@ -521,42 +531,24 @@ func _craft_direct(recipe):
 	if gs == null:
 		craft_recipe_requested.emit(recipe)
 		return
-	if gs.has_method("craft_recipe"):
-		var result = gs.craft_recipe(recipe)
-		set_last_result(str(result.get("message", "Craft result.")))
-	else:
-		var requirements = recipe.get("requirements", {})
-		for id in requirements.keys():
-			if gs.get_item_count(str(id)) < int(requirements[id]):
-				set_last_result("Missing %s: %d / %d" % [_item_name(str(id)), gs.get_item_count(str(id)), int(requirements[id])])
-				_refresh_from_gamestate()
-				return
-		for id in requirements.keys():
-			gs.remove_item(str(id), int(requirements[id]))
-		var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
-		var output_qty = max(1, int(recipe.get("output_quantity", 1)))
-		gs.add_item(output_id, output_qty)
-		set_last_result("Crafted %s x%d." % [_item_name(output_id), output_qty])
+	var result = gs.craft_recipe(recipe)
+	set_last_result(str(result.get("message", "Craft result.")))
 	_refresh_from_gamestate()
 
 func _use_direct(item_id):
 	if gs == null:
 		use_item_requested.emit(item_id)
 		return
-	if gs.has_method("use_item"):
-		var result = gs.use_item(item_id)
-		set_last_result(str(result.get("message", "Used item.")))
+	var result = gs.use_item(item_id)
+	set_last_result(str(result.get("message", "Used item.")))
 	_refresh_from_gamestate()
 
 func _equip_direct(item_id):
 	if gs == null:
 		equip_item_requested.emit(item_id)
 		return
-	if gs.has_method("equip_item"):
-		var result = gs.equip_item(item_id)
-		set_last_result(str(result.get("message", "Equip result.")))
-	else:
-		set_last_result("Cannot equip %s." % _item_name(item_id))
+	var result = gs.equip_item(item_id)
+	set_last_result(str(result.get("message", "Equip result.")))
 	_refresh_from_gamestate()
 
 func _item_def(item_id):
@@ -566,3 +558,89 @@ func _item_def(item_id):
 
 func _item_name(item_id): return str(_item_def(item_id).get("name", item_id))
 func _item_icon(item_id): return str(_item_def(item_id).get("icon", "?"))
+
+func _run_phase1_test():
+	if gs == null:
+		gs = get_node_or_null("/root/GameState")
+	var results = PackedStringArray()
+	results.append("=== PHASE 1 SELF TEST ===")
+	if gs == null:
+		results.append("GameState: FAIL — not found")
+		dbg_lines_label.text = "\n".join(results)
+		return
+	results.append("GameState: OK")
+	gs.ensure_runtime_state()
+
+	var start_timber = gs.get_item_count("weathered_timber")
+	var start_bandage = gs.get_item_count("starter_bandage")
+	var bandage_recipe = {"id":"starter_bandage","name":"Simple Bandage","requirements":{"weathered_timber":2},"output_item_id":"starter_bandage","output_quantity":1}
+	var craft_result = gs.craft_recipe(bandage_recipe)
+	var end_timber = gs.get_item_count("weathered_timber")
+	var end_bandage = gs.get_item_count("starter_bandage")
+
+	if craft_result.get("ok", false):
+		results.append("Craft Simple Bandage: PASS")
+	else:
+		results.append("Craft Simple Bandage: FAIL - %s" % craft_result.get("message", "unknown"))
+	if end_timber == start_timber - 2:
+		results.append("Weathered Timber consumed: PASS")
+	else:
+		results.append("Weathered Timber consumed: FAIL - timber stayed %d instead of %d" % [end_timber, start_timber - 2])
+	if end_bandage == start_bandage + 1:
+		results.append("Bandage added: PASS")
+	else:
+		results.append("Bandage added: FAIL - bandage %d instead of %d" % [end_bandage, start_bandage + 1])
+
+	var equip_result = gs.equip_item("starter_hatchet")
+	if equip_result.get("ok", false) and gs.equipment.get("main_hand", "") == "starter_hatchet":
+		results.append("Equip Starter Hatchet: PASS")
+	else:
+		results.append("Equip Starter Hatchet: FAIL - %s, main_hand=%s" % [equip_result.get("message", ""), gs.equipment.get("main_hand", "")])
+
+	var hp_before = int(gs.current_hp)
+	var damage_result = gs.damage_player(5, "self_test_enemy")
+	var hp_after = int(gs.current_hp)
+	if damage_result.get("ok", false) and hp_after == hp_before - 5:
+		results.append("Damage Player: PASS")
+	else:
+		results.append("Damage Player: FAIL - HP %d -> %d (expected -5)" % [hp_before, hp_after])
+
+	var sword_before = gs.get_item_count("rusty_sword")
+	var coin_before = gs.get_item_count("ancient_coin")
+	gs.add_item("rusty_sword", 1)
+	gs.add_item("ancient_coin", 5)
+	var sword_after = gs.get_item_count("rusty_sword")
+	var coin_after = gs.get_item_count("ancient_coin")
+	if sword_after > sword_before and coin_after > coin_before:
+		results.append("Chest Loot Added: PASS")
+	else:
+		results.append("Chest Loot Added: FAIL - sword %d->%d, coin %d->%d" % [sword_before, sword_after, coin_before, coin_after])
+
+	gs.equip_item("rusty_sword")
+	var main_hand = gs.equipment.get("main_hand", "")
+	if main_hand == "rusty_sword":
+		results.append("Equip Rusty Sword: PASS")
+	else:
+		results.append("Equip Rusty Sword: FAIL - main_hand=%s" % main_hand)
+
+	var hatchet_bonus = int(gs.get_item_definition("starter_hatchet").get("damage_bonus", 0))
+	var sword_bonus = gs.get_weapon_damage_bonus()
+	if sword_bonus > hatchet_bonus:
+		results.append("Weapon Bonus Increased: PASS")
+	else:
+		results.append("Weapon Bonus Increased: FAIL - sword bonus %d <= hatchet bonus %d" % [sword_bonus, hatchet_bonus])
+
+	var all_pass = true
+	for line in results:
+		if "FAIL" in line:
+			all_pass = false
+			break
+	if all_pass:
+		results.append("Overall: PASS")
+	else:
+		results.append("Overall: FAIL")
+
+	_refresh_from_gamestate()
+	if not dbg_panel.visible:
+		_toggle_debug_panel()
+	dbg_lines_label.text = "\n".join(results)

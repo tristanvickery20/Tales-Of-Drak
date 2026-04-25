@@ -1,0 +1,332 @@
+STOP. PHASE 1 FAILED ACCEPTANCE TEST.
+
+Do not add new features.
+Do not redesign UI.
+Do not touch `.github/workflows/web-preview.yml`.
+Do not work on Phase 2.
+Do not work on graphics.
+Do not make assumptions.
+
+Current failed iPhone behavior:
+1. Crafting still does not consume material.
+2. Crafting still does not add crafted item to Backpack.
+3. In dungeon, HP shows 1/1.
+4. Backpack is empty in dungeon.
+5. Equipping Starter Hatchet does not update main hand.
+6. Hatchet details do not show weapon stats like damage.
+7. No attack/attacked flash feedback.
+8. Dungeon state is not reading the same GameState as the world.
+
+This means Phase 1 is NOT complete.
+
+Your job:
+Repair Phase 1 runtime wiring and add an in-game Phase 1 self-test so the user can verify from iPhone.
+
+Do not continue until you understand this:
+GameState must be the single runtime source of truth.
+World, dungeon, HUD, crafting, equipment, HP, XP, inventory, and chest loot must all use the same GameState instance.
+
+====================================================
+REQUIRED FIRST STEP — INSPECT AND REPORT
+====================================================
+
+Before editing, report:
+
+1. `git status`
+2. `git log --oneline -8`
+3. Confirm whether `.github/workflows/web-preview.yml` changed.
+4. Confirm GameState autoload registration in `godot/project.godot`.
+5. Confirm which script is attached to `test_world.tscn`.
+6. Confirm which script is attached to `dungeon_shell.tscn`.
+7. Confirm whether world HUD and dungeon HUD use the same DebugHud script.
+8. Confirm where crafting is handled.
+9. Confirm where equipment is handled.
+10. Confirm where enemy damage is handled.
+
+Then make a short repair plan.
+
+====================================================
+REPAIR GOAL
+====================================================
+
+Fix only these Phase 1 failures:
+
+A. Crafting
+- Selecting Simple Bandage and tapping CRAFT must:
+  - call `GameState.craft_recipe(selected_recipe)`
+  - consume `weathered_timber x2`
+  - add `starter_bandage x1`
+  - refresh Backpack immediately
+  - show Last message:
+    `CRAFT success: Simple Bandage -> Simple Bandage x1`
+
+B. Equipment
+- Selecting Starter Hatchet and tapping EQUIP must:
+  - call `GameState.equip_item("starter_hatchet")`
+  - update `equipment.main_hand`
+  - Character tab must show:
+    `Main hand: Starter Hatchet`
+    `Weapon damage: 1d4` or equivalent starter weapon damage display
+    `Weapon damage bonus: +1`
+
+- Rusty Sword must show:
+    `Main hand: Rusty Sword`
+    `Weapon damage: 1d8` or equivalent
+    `Weapon damage bonus: +4`
+
+C. Dungeon GameState
+- Dungeon must call `GameState.ensure_runtime_state()` on ready.
+- Dungeon HUD must read from GameState.
+- Dungeon HP must show real HP, not 1/1.
+- Dungeon Backpack must not be empty if the world backpack had items.
+- HP / XP / inventory / equipment must persist between world and dungeon.
+
+D. Enemy damage
+- Enemy attack must call:
+  `GameState.damage_player(ENEMY_TOUCH_DAMAGE, "enemy")`
+- HP bar must drop immediately.
+- Character tab must reflect new HP.
+- Debug log must show:
+  `DAMAGE enemy: 24 -> 19 (-5)` or similar.
+
+E. Attack feedback
+Add simple lightweight flash feedback:
+- When player attacks enemy, enemy briefly flashes white/red.
+- When enemy attacks player, player briefly flashes red.
+- Do not add heavy effects.
+- Do not redesign models.
+
+F. Chest loot
+- Opening chest after enemy death must call:
+  `GameState.add_item("rusty_sword", 1)`
+  `GameState.add_item("ancient_coin", 5)`
+- Backpack must show Rusty Sword and Ancient Coins immediately after refresh.
+
+====================================================
+MANDATORY SELF-TEST BUTTON
+====================================================
+
+Add a visible button in the Debug panel:
+
+`RUN PHASE 1 TEST`
+
+When tapped, it must run a scripted self-test against GameState only.
+
+The self-test must do this:
+
+1. Call `GameState.ensure_runtime_state()`
+2. Record starting Weathered Timber count.
+3. Call `GameState.craft_recipe(simple_bandage_recipe)`
+4. Verify:
+   - weathered_timber decreased by 2
+   - starter_bandage increased by 1
+5. Call `GameState.equip_item("starter_hatchet")`
+6. Verify:
+   - equipment.main_hand == "starter_hatchet"
+7. Call `GameState.damage_player(5, "self_test_enemy")`
+8. Verify:
+   - HP decreased by 5
+9. Call:
+   - `GameState.add_item("rusty_sword", 1)`
+   - `GameState.add_item("ancient_coin", 5)`
+10. Verify:
+   - rusty_sword count increased
+   - ancient_coin count increased
+11. Call `GameState.equip_item("rusty_sword")`
+12. Verify:
+   - equipment.main_hand == "rusty_sword"
+   - weapon damage bonus is higher than starter hatchet
+13. Refresh HUD.
+14. Print PASS/FAIL lines in debug panel.
+
+The debug output must look like this:
+
+PHASE 1 SELF TEST
+GameState: OK
+Craft Simple Bandage: PASS
+Weathered Timber consumed: PASS
+Bandage added: PASS
+Equip Starter Hatchet: PASS
+Damage Player: PASS
+Chest Loot Added: PASS
+Equip Rusty Sword: PASS
+Weapon Bonus Increased: PASS
+Overall: PASS
+
+If anything fails, show exact failure reason:
+Example:
+Craft Simple Bandage: FAIL — weathered_timber stayed 10 instead of 8
+
+====================================================
+GAMESTATE REQUIREMENTS
+====================================================
+
+In `game_state.gd`, verify/fix:
+
+Starter runtime:
+- Fighter HP = 24/24
+- inventory:
+  - starter_hatchet x1
+  - weathered_timber x10
+  - torch_kit x1
+- equipment:
+  - main_hand = starter_hatchet
+  - armor = plain_clothes
+
+Item definitions must include display stats:
+
+starter_hatchet:
+- name: Starter Hatchet
+- type: tool / weapon
+- slot: main_hand
+- equippable: true
+- damage_dice: 1d4
+- damage_bonus: 1
+
+rusty_sword:
+- name: Rusty Sword
+- type: weapon
+- slot: main_hand
+- equippable: true
+- damage_dice: 1d8
+- damage_bonus: 4
+
+starter_bandage:
+- name: Simple Bandage
+- usable: true
+- heal_amount: 8
+
+weathered_timber:
+- name: Weathered Timber
+- type: resource
+
+ancient_coin:
+- name: Ancient Coin
+- type: currency
+
+GameState action methods must return dictionaries:
+- `{ "ok": true, "message": "..." }`
+- `{ "ok": false, "message": "..." }`
+
+Required methods:
+- `craft_recipe(recipe)`
+- `equip_item(item_id)`
+- `use_item(item_id)`
+- `damage_player(amount, source)`
+- `add_item(item_id, quantity)`
+- `remove_item(item_id, quantity)`
+- `get_inventory_lines()`
+- `get_character_view_lines()`
+- `get_debug_lines()`
+- `get_weapon_damage_bonus()`
+
+====================================================
+HUD REQUIREMENTS
+====================================================
+
+In `debug_hud.gd`:
+
+CRAFT button:
+- must call only `GameState.craft_recipe(selected_recipe)`
+- must not manually mutate inventory
+- must refresh from GameState after result
+
+EQUIP button:
+- must call only `GameState.equip_item(selected_item_id)`
+- must refresh from GameState after result
+
+USE button:
+- must call only `GameState.use_item(selected_item_id)`
+- must refresh from GameState after result
+
+Backpack item details must show:
+- name
+- type
+- quantity
+- description
+- damage dice if weapon/tool
+- damage bonus if weapon/tool
+- usable/equippable state if relevant
+
+Character tab must show:
+- HP
+- XP
+- AC
+- Main hand
+- Armor
+- Weapon damage
+- Weapon damage bonus
+
+Debug panel must show:
+- GameState OK/MISSING
+- scene
+- HP
+- XP
+- inventory dump
+- equipment dump
+- selected item index
+- selected recipe index
+- last action
+- action log
+- RUN PHASE 1 TEST button and results
+
+====================================================
+DUNGEON REQUIREMENTS
+====================================================
+
+In `dungeon_shell_controller.gd`:
+
+On ready:
+- call `GameState.ensure_runtime_state()`
+- refresh HUD from GameState
+- do not reset inventory
+- do not create fake fallback inventory
+- do not show HP 1/1
+
+Enemy attack:
+- call `GameState.damage_player(ENEMY_TOUCH_DAMAGE, "enemy")`
+- refresh HUD
+- flash player red briefly
+
+Player attack:
+- must work from mobile ATK button/input action
+- must reduce enemy HP
+- damage should include `GameState.get_weapon_damage_bonus()`
+- flash enemy briefly
+
+Chest:
+- call `GameState.add_item("rusty_sword", 1)`
+- call `GameState.add_item("ancient_coin", 5)`
+- refresh HUD
+
+====================================================
+VALIDATION
+====================================================
+
+Run:
+python tools/validate_character_framework.py
+
+Also run these checks:
+
+grep -R "craft_recipe" godot/scripts
+grep -R "equip_item" godot/scripts
+grep -R "damage_player" godot/scripts
+grep -R "add_item(\"rusty_sword\"" godot/scripts
+git diff -- .github/workflows/web-preview.yml
+
+Workflow diff must be empty.
+
+Commit and push only if validation passes.
+
+Commit message:
+Repair Phase 1 GameState runtime loop
+
+Report back:
+- changed files
+- validation result
+- workflow untouched confirmation
+- why HP was 1/1 in dungeon
+- why crafting did not mutate inventory
+- why equipment did not update
+- whether RUN PHASE 1 TEST was added
+- exact iPhone test checklist
