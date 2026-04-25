@@ -167,12 +167,14 @@ func use_item(item_id):
 	if not has_item(item_id):
 		var msg = "USE failed: you do not have %s" % get_item_name(item_id)
 		log_action(msg)
-		return {"ok": false, "message": msg}
+		last_action_result = {"ok": false, "message": msg}
+		return last_action_result
 	var def = get_item_definition(item_id)
 	if not bool(def.get("usable", false)):
 		var msg = "USE failed: %s is not usable" % get_item_name(item_id)
 		log_action(msg)
-		return {"ok": false, "message": msg}
+		last_action_result = {"ok": false, "message": msg}
+		return last_action_result
 	var heal = int(def.get("heal_amount", 0))
 	if heal > 0:
 		current_hp = min(max_hp, current_hp + heal)
@@ -184,7 +186,8 @@ func use_item(item_id):
 		return last_action_result
 	var msg = "USE failed: %s has no use behavior" % get_item_name(item_id)
 	log_action(msg)
-	return {"ok": false, "message": msg}
+	last_action_result = {"ok": false, "message": msg}
+	return last_action_result
 
 func craft_recipe(recipe):
 	var requirements = recipe.get("requirements", {})
@@ -199,7 +202,8 @@ func craft_recipe(recipe):
 		if owned < required:
 			var msg = "CRAFT failed: need %s %d/%d" % [get_item_name(str(item_id)), owned, required]
 			log_action(msg)
-			return {"ok": false, "message": msg}
+			last_action_result = {"ok": false, "message": msg}
+			return last_action_result
 
 	for item_id in requirements.keys():
 		remove_item(str(item_id), int(requirements[item_id]))
@@ -238,6 +242,7 @@ func add_xp(amount):
 	if amount <= 0:
 		var msg = "No XP gained."
 		log_action(msg)
+		last_action_result = {"ok": true, "message": msg, "leveled_up": false}
 		return {"leveled_up": false, "message": msg}
 	xp += amount
 	var leveled_up = false
@@ -254,6 +259,7 @@ func add_xp(amount):
 	else:
 		msg = "+%d XP. %d/%d XP" % [amount, xp, xp_to_next]
 	log_action(msg)
+	last_action_result = {"ok": true, "message": msg, "leveled_up": leveled_up}
 	runtime_state_changed.emit()
 	if leveled_up: return {"leveled_up": true, "message": msg}
 	return {"leveled_up": false, "message": msg}
