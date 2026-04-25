@@ -19,7 +19,7 @@ var gs = null
 
 
 func _ready():
-	gs = get_node_or_null("/root/GameState")
+	gs = _get_game_state()
 	if gs != null and gs.has_method("ensure_runtime_state"):
 		gs.ensure_runtime_state()
 	_connect_hud_signals()
@@ -223,3 +223,8 @@ func _add_item(item_id, qty):
 func _remove_item(item_id, qty):
 	if gs != null and gs.has_method("remove_item"):
 		gs.remove_item(str(item_id), int(qty))
+
+func _get_game_state():
+	if Engine.has_singleton("GameState"):
+		return Engine.get_singleton("GameState")
+	return get_node_or_null("/root/GameState")

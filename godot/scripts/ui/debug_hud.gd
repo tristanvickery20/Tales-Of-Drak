@@ -64,7 +64,7 @@ var recipes = [
 ]
 
 func _ready():
-	gs = get_node_or_null("/root/GameState")
+	gs = _get_game_state()
 	if gs != null and gs.has_signal("runtime_state_changed"):
 		gs.connect("runtime_state_changed", Callable(self, "_refresh_from_gamestate"))
 	root_margin.offset_top = 88
@@ -79,7 +79,7 @@ func _ready():
 
 func _refresh_from_gamestate():
 	if gs == null:
-		gs = get_node_or_null("/root/GameState")
+		gs = _get_game_state()
 	if gs == null:
 		return
 	if gs.has_method("ensure_runtime_state"):
@@ -559,9 +559,14 @@ func _item_def(item_id):
 func _item_name(item_id): return str(_item_def(item_id).get("name", item_id))
 func _item_icon(item_id): return str(_item_def(item_id).get("icon", "?"))
 
+func _get_game_state():
+	if Engine.has_singleton("GameState"):
+		return Engine.get_singleton("GameState")
+	return get_node_or_null("/root/GameState")
+
 func _run_phase1_test():
 	if gs == null:
-		gs = get_node_or_null("/root/GameState")
+		gs = _get_game_state()
 	var results = PackedStringArray()
 	results.append("=== PHASE 1 SELF TEST ===")
 	if gs == null:
