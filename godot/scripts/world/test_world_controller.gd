@@ -91,21 +91,25 @@ func _on_hud_craft_recipe_requested(recipe):
 
 
 func _craft_recipe(recipe):
-	var requirements = recipe.get("requirements", {})
-	var output_item_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
-	var output_quantity = max(1, int(recipe.get("output_quantity", 1)))
-	var recipe_name = str(recipe.get("name", _item_name(output_item_id)))
-	for item_id in requirements.keys():
-		var required = int(requirements[item_id])
-		var owned = _item_count(str(item_id))
-		if owned < required:
-			_hud_result("Missing %s: %d / %d" % [_item_name(str(item_id)), owned, required])
-			_update_hud()
-			return
-	for item_id in requirements.keys():
-		_remove_item(str(item_id), int(requirements[item_id]))
-	_add_item(output_item_id, output_quantity)
-	_hud_result("Crafted %s x%d" % [recipe_name, output_quantity])
+	if gs != null and gs.has_method("craft_recipe"):
+		var result = gs.craft_recipe(recipe)
+		_hud_result(str(result.get("message", "Craft result.")))
+	else:
+		var requirements = recipe.get("requirements", {})
+		var output_item_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
+		var output_quantity = max(1, int(recipe.get("output_quantity", 1)))
+		var recipe_name = str(recipe.get("name", _item_name(output_item_id)))
+		for item_id in requirements.keys():
+			var required = int(requirements[item_id])
+			var owned = _item_count(str(item_id))
+			if owned < required:
+				_hud_result("Missing %s: %d / %d" % [_item_name(str(item_id)), owned, required])
+				_update_hud()
+				return
+		for item_id in requirements.keys():
+			_remove_item(str(item_id), int(requirements[item_id]))
+		_add_item(output_item_id, output_quantity)
+		_hud_result("Crafted %s x%d" % [recipe_name, output_quantity])
 	_update_hud()
 
 
@@ -119,8 +123,9 @@ func _on_hud_use_item_requested(item_id):
 
 
 func _on_hud_equip_item_requested(item_id):
-	if gs != null and gs.has_method("equip_item") and gs.equip_item(str(item_id)):
-		_hud_result("Equipped %s." % _item_name(str(item_id)))
+	if gs != null and gs.has_method("equip_item"):
+		var result = gs.equip_item(str(item_id))
+		_hud_result(str(result.get("message", "Equip result.")))
 	else:
 		_hud_result("Cannot equip %s." % _item_name(str(item_id)))
 	_update_hud()

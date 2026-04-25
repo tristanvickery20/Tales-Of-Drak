@@ -120,8 +120,8 @@ func _build_enemy_hp_label():
 	enemy_hp_label = Label3D.new()
 	enemy_hp_label.name = "EnemyHealthLabel"
 	enemy_hp_label.position = Vector3(0, 1.45, 0)
-	enemy_hp_label.font_size = 28
-	enemy_hp_label.pixel_size = 0.003
+	enemy_hp_label.font_size = 16
+	enemy_hp_label.pixel_size = 0.002
 	enemy_hp_label.modulate = Color(1, 0.06, 0.06, 1)
 	enemy_hp_label.outline_modulate = Color(0, 0, 0, 1)
 	enemy_hp_label.outline_size = 6
@@ -167,14 +167,14 @@ func _enemy_touch_damage():
 	var damage = ENEMY_TOUCH_DAMAGE
 	if guard_timer > 0.0:
 		damage = max(1, int(round(float(damage) * GUARD_DAMAGE_MULTIPLIER)))
-	GameState.set_current_hp(GameState.current_hp - damage)
+	GameState.damage_player(damage, "enemy")
 	if player_mesh != null:
 		player_mesh.material_override = player_mat_guard if guard_timer > 0.0 else player_mat_hit
 	player_defeated = GameState.current_hp <= 0
 	if player_defeated:
 		_hud_result("You were defeated. Use the exit portal to leave.")
 	else:
-		_hud_result("Enemy hit you: -%d HP." % damage)
+		_hud_result("Enemy hit you: -%d HP. %d/%d HP." % [damage, GameState.current_hp, GameState.max_hp])
 	_update_hud()
 
 func _update_prompt():
@@ -284,25 +284,13 @@ func _on_hud_use_item_requested(item_id):
 	_update_hud()
 
 func _on_hud_equip_item_requested(item_id):
-	if GameState.equip_item(str(item_id)):
-		_hud_result("Equipped %s." % GameState.get_item_name(str(item_id)))
-	else:
-		_hud_result("Cannot equip %s." % GameState.get_item_name(str(item_id)))
+	var result = GameState.equip_item(str(item_id))
+	_hud_result(str(result.get("message", "Equip result.")))
 	_update_hud()
 
 func _on_hud_craft_recipe_requested(recipe):
-	var requirements = recipe.get("requirements", {})
-	for item_id in requirements.keys():
-		if GameState.get_item_count(str(item_id)) < int(requirements[item_id]):
-			_hud_result("Missing %s." % GameState.get_item_name(str(item_id)))
-			_update_hud()
-			return
-	for item_id in requirements.keys():
-		GameState.remove_item(str(item_id), int(requirements[item_id]))
-	var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
-	var qty = max(1, int(recipe.get("output_quantity", 1)))
-	GameState.add_item(output_id, qty)
-	_hud_result("Crafted %s x%d." % [GameState.get_item_name(output_id), qty])
+	var result = GameState.craft_recipe(recipe)
+	_hud_result(str(result.get("message", "Craft result.")))
 	_update_hud()
 
 func _exit_to_world():

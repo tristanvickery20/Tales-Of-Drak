@@ -19,6 +19,7 @@ var hp_text
 var xp_fill
 var xp_text
 var inv_button
+var dbg_button
 var overlay
 var panel
 var left_label
@@ -30,6 +31,10 @@ var secondary_button
 var tab_backpack
 var tab_crafting
 var tab_character
+
+var dbg_overlay
+var dbg_panel
+var dbg_lines_label
 
 var gs = null
 var active_tab = "backpack"
@@ -66,7 +71,9 @@ func _ready():
 	root_margin.offset_right = -105
 	_build_bars()
 	_build_button()
+	_build_dbg_button()
 	_build_inventory_panel()
+	_build_debug_panel()
 	set_player_health(1, 1)
 	set_progression(1, 0, 100)
 	_update_view()
@@ -165,6 +172,98 @@ func _build_button():
 	inv_button.offset_bottom = 50
 	inv_button.pressed.connect(_toggle_inventory)
 	add_child(inv_button)
+
+func _build_dbg_button():
+	dbg_button = Button.new()
+	dbg_button.text = "DBG"
+	dbg_button.anchor_left = 1
+	dbg_button.anchor_right = 1
+	dbg_button.offset_left = -92
+	dbg_button.offset_top = 56
+	dbg_button.offset_right = -12
+	dbg_button.offset_bottom = 94
+	dbg_button.pressed.connect(_toggle_debug_panel)
+	add_child(dbg_button)
+
+func _build_debug_panel():
+	dbg_overlay = ColorRect.new()
+	dbg_overlay.visible = false
+	dbg_overlay.color = Color(0,0,0,0.32)
+	dbg_overlay.anchor_right = 1
+	dbg_overlay.anchor_bottom = 1
+	dbg_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dbg_overlay)
+
+	dbg_panel = PanelContainer.new()
+	dbg_panel.visible = false
+	dbg_panel.anchor_left = 0.04
+	dbg_panel.anchor_top = 0.08
+	dbg_panel.anchor_right = 0.96
+	dbg_panel.anchor_bottom = 0.92
+	dbg_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.02,0.015,0.01,0.95), Color(0.74,0.55,0.32,0.96), 10))
+	add_child(dbg_panel)
+
+	var dbg_margin = MarginContainer.new()
+	dbg_margin.add_theme_constant_override("margin_left", 10)
+	dbg_margin.add_theme_constant_override("margin_top", 8)
+	dbg_margin.add_theme_constant_override("margin_right", 10)
+	dbg_margin.add_theme_constant_override("margin_bottom", 10)
+	dbg_panel.add_child(dbg_margin)
+
+	var dbg_vbox = VBoxContainer.new()
+	dbg_vbox.add_theme_constant_override("separation", 6)
+	dbg_margin.add_child(dbg_vbox)
+
+	var dbg_top = HBoxContainer.new()
+	dbg_top.add_theme_constant_override("separation", 6)
+	dbg_vbox.add_child(dbg_top)
+
+	var dbg_title = Label.new()
+	dbg_title.text = "Tales of Drak Debug Console"
+	dbg_title.add_theme_font_size_override("font_size", 18)
+	dbg_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dbg_top.add_child(dbg_title)
+
+	var refresh_btn = Button.new()
+	refresh_btn.text = "Refresh"
+	refresh_btn.pressed.connect(_refresh_debug_panel)
+	dbg_top.add_child(refresh_btn)
+
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	close_btn.pressed.connect(_toggle_debug_panel)
+	dbg_top.add_child(close_btn)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dbg_vbox.add_child(scroll)
+
+	dbg_lines_label = Label.new()
+	dbg_lines_label.add_theme_font_size_override("font_size", 12)
+	dbg_lines_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	scroll.add_child(dbg_lines_label)
+
+func _toggle_debug_panel():
+	dbg_overlay.visible = not dbg_panel.visible
+	dbg_panel.visible = not dbg_panel.visible
+	if dbg_panel.visible:
+		_refresh_debug_panel()
+
+func _refresh_debug_panel():
+	if dbg_lines_label == null:
+		return
+	var lines = PackedStringArray()
+	if gs != null and gs.has_method("get_debug_lines"):
+		var gs_lines = gs.get_debug_lines()
+		lines.append_array(gs_lines)
+	else:
+		lines.append("GameState not found")
+	lines.append("--- HUD State ---")
+	lines.append("Selected item index: %d" % selected_item_index)
+	lines.append("Selected recipe index: %d" % selected_recipe_index)
+	lines.append("Active tab: %s" % active_tab)
+	dbg_lines_label.text = "\n".join(lines)
 
 func _build_inventory_panel():
 	overlay = ColorRect.new()
@@ -422,19 +521,23 @@ func _craft_direct(recipe):
 	if gs == null:
 		craft_recipe_requested.emit(recipe)
 		return
-	var requirements = recipe.get("requirements", {})
-	for id in requirements.keys():
-		if gs.get_item_count(str(id)) < int(requirements[id]):
-			set_last_result("Missing %s: %d / %d" % [_item_name(str(id)), gs.get_item_count(str(id)), int(requirements[id])])
-			_refresh_from_gamestate()
-			return
-	for id in requirements.keys():
-		gs.remove_item(str(id), int(requirements[id]))
-	var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
-	var output_qty = max(1, int(recipe.get("output_quantity", 1)))
-	gs.add_item(output_id, output_qty)
-	set_last_result("Crafted %s x%d." % [_item_name(output_id), output_qty])
-	call_deferred("_refresh_from_gamestate")
+	if gs.has_method("craft_recipe"):
+		var result = gs.craft_recipe(recipe)
+		set_last_result(str(result.get("message", "Craft result.")))
+	else:
+		var requirements = recipe.get("requirements", {})
+		for id in requirements.keys():
+			if gs.get_item_count(str(id)) < int(requirements[id]):
+				set_last_result("Missing %s: %d / %d" % [_item_name(str(id)), gs.get_item_count(str(id)), int(requirements[id])])
+				_refresh_from_gamestate()
+				return
+		for id in requirements.keys():
+			gs.remove_item(str(id), int(requirements[id]))
+		var output_id = str(recipe.get("output_item_id", recipe.get("id", "crafted_item")))
+		var output_qty = max(1, int(recipe.get("output_quantity", 1)))
+		gs.add_item(output_id, output_qty)
+		set_last_result("Crafted %s x%d." % [_item_name(output_id), output_qty])
+	_refresh_from_gamestate()
 
 func _use_direct(item_id):
 	if gs == null:
@@ -443,17 +546,18 @@ func _use_direct(item_id):
 	if gs.has_method("use_item"):
 		var result = gs.use_item(item_id)
 		set_last_result(str(result.get("message", "Used item.")))
-	call_deferred("_refresh_from_gamestate")
+	_refresh_from_gamestate()
 
 func _equip_direct(item_id):
 	if gs == null:
 		equip_item_requested.emit(item_id)
 		return
-	if gs.has_method("equip_item") and gs.equip_item(item_id):
-		set_last_result("Equipped %s." % _item_name(item_id))
+	if gs.has_method("equip_item"):
+		var result = gs.equip_item(item_id)
+		set_last_result(str(result.get("message", "Equip result.")))
 	else:
 		set_last_result("Cannot equip %s." % _item_name(item_id))
-	call_deferred("_refresh_from_gamestate")
+	_refresh_from_gamestate()
 
 func _item_def(item_id):
 	item_id = str(item_id)
