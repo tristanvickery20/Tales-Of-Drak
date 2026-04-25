@@ -77,6 +77,8 @@ func _ready():
 	_update_view()
 
 func _get_game_state():
+	if Engine.has_singleton("GameState"):
+		return Engine.get_singleton("GameState")
 	return get_node_or_null("/root/GameState")
 
 func _refresh_from_gamestate():
@@ -570,7 +572,7 @@ func _run_phase1_test():
 	results.append("=== PHASE 1 SELF TEST ===")
 
 	if gs == null:
-		results.append("GameState: FAIL - not found (get_node /root/GameState returned null)")
+		results.append("GameState: FAIL - Engine.has_singleton and get_node both returned null")
 		dbg_lines_label.text = "\n".join(results)
 		if not dbg_panel.visible:
 			_toggle_debug_panel()
