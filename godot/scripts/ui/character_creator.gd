@@ -151,7 +151,7 @@ func _format_stats(stats: Dictionary) -> String:
 func _start_adventure() -> void:
 	var species: Dictionary = SPECIES_OPTIONS[selected_species_index]
 	var clazz: Dictionary = CLASS_OPTIONS[selected_class_index]
-	GameState.set_character({
+	var selection := {
 		"character_name": name_input.text,
 		"species_id": species["id"],
 		"species_name": species["name"],
@@ -159,5 +159,7 @@ func _start_adventure() -> void:
 		"class_name": clazz["name"],
 		"subclass_id": clazz["subclass_id"],
 		"subclass_name": clazz["subclass_name"],
-	})
-	get_tree().change_scene_to_file(TEST_WORLD_SCENE)
+	}
+	if GameState != null:
+		GameState.set_character(selection)
+	get_tree().call_deferred("change_scene_to_file", TEST_WORLD_SCENE)
