@@ -17,7 +17,8 @@ const DUNGEON_INTERACT_RANGE = 3.4
 
 
 func _ready():
-	GameState.ensure_runtime_state()
+	if GameState != null:
+		GameState.ensure_runtime_state()
 	_connect_hud_signals()
 	_update_hud()
 	_hud_result("Entered world as %s." % _character_summary())
@@ -125,7 +126,7 @@ func _spawn_build_placeholder():
 
 
 func _update_hud():
-	if hud == null:
+	if hud == null or GameState == null:
 		return
 	_hud_call("set_player_health", [_current_hp(), _max_hp()])
 	_hud_call("set_progression", [_level(), _xp(), _xp_to_next()])

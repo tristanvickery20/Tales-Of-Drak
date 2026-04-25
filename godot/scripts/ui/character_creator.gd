@@ -162,5 +162,10 @@ func _start_adventure() -> void:
 		"subclass_id": clazz["subclass_id"],
 		"subclass_name": clazz["subclass_name"],
 	}
-	GameState.set_character(selection)
+	if GameState != null:
+		GameState.set_character(selection)
+	call_deferred("_do_change_scene")
+
+
+func _do_change_scene() -> void:
 	get_tree().change_scene_to_file(TEST_WORLD_SCENE)

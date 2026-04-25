@@ -55,11 +55,12 @@ var player_mat_hit = null
 var player_mat_guard = null
 
 func _ready():
-	GameState.ensure_runtime_state()
+	if GameState != null:
+		GameState.ensure_runtime_state()
 	enemy_hp = ENEMY_MAX_HP
 	enemy_defeated = false
 	chest_opened = false
-	player_defeated = GameState.current_hp <= 0
+	player_defeated = GameState != null and GameState.current_hp <= 0
 	_setup_materials()
 	_build_enemy_hp_label()
 	_connect_hud_signals()
@@ -312,6 +313,8 @@ func _near(target, range):
 	return player.global_position.distance_to(target.global_position) <= float(range)
 
 func _update_hud():
+	if GameState == null:
+		return
 	_hud_call("set_player_health", [GameState.current_hp, GameState.max_hp])
 	_hud_call("set_progression", [GameState.level, GameState.xp, GameState.xp_to_next])
 	_hud_call("set_character_summary", [GameState.character_name, "%s %s" % [GameState.species_name, GameState.class_name]])

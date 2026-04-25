@@ -63,7 +63,7 @@ var recipes = [
 ]
 
 func _ready():
-	if GameState.has_signal("runtime_state_changed"):
+	if GameState != null and GameState.has_signal("runtime_state_changed"):
 		GameState.connect("runtime_state_changed", Callable(self, "_refresh_from_gamestate"))
 	root_margin.offset_top = 88
 	root_margin.offset_right = -105
@@ -72,10 +72,13 @@ func _ready():
 	_build_dbg_button()
 	_build_inventory_panel()
 	_build_debug_panel()
-	_refresh_from_gamestate()
+	if GameState != null:
+		_refresh_from_gamestate()
 	_update_view()
 
 func _refresh_from_gamestate():
+	if GameState == null:
+		return
 	GameState.ensure_runtime_state()
 	set_player_health(GameState.current_hp, GameState.max_hp)
 	set_progression(GameState.level, GameState.xp, GameState.xp_to_next)
@@ -249,8 +252,10 @@ func _refresh_debug_panel():
 	if dbg_lines_label == null:
 		return
 	var lines = PackedStringArray()
-	var gs_lines = GameState.get_debug_lines()
-	lines.append_array(gs_lines)
+	if GameState != null:
+		lines.append_array(GameState.get_debug_lines())
+	else:
+		lines.append("GameState: not found")
 	lines.append("--- HUD State ---")
 	lines.append("Selected item index: %d" % selected_item_index)
 	lines.append("Selected recipe index: %d" % selected_recipe_index)
