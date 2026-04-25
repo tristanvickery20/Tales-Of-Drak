@@ -162,4 +162,4 @@ func _start_adventure() -> void:
 	}
 	if GameState != null:
 		GameState.set_character(selection)
-	get_tree().call_deferred("change_scene_to_file", TEST_WORLD_SCENE)
+	get_tree().change_scene_to_file(TEST_WORLD_SCENE)
