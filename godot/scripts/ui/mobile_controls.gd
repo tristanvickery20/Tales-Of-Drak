@@ -160,13 +160,11 @@ func _add_hotbar_slot(parent: Node, label: String, action: StringName, slot_numb
 	btn.add_theme_font_size_override("font_size", font_size)
 	btn.pressed.connect(func() -> void:
 		Input.action_press(action)
-		call_deferred("_release_action", action)
+		get_tree().create_timer(0.12).timeout.connect(func():
+			Input.action_release(action)
+		)
 	)
 	parent.add_child(btn)
-
-func _release_action(action: StringName) -> void:
-	Input.action_release(action)
-
 
 func _format_button_text(label: String, slot_number: String) -> String:
 	if slot_number.is_empty():

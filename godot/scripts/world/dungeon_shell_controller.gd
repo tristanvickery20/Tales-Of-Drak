@@ -75,12 +75,17 @@ func _process(delta):
 	_update_enemy_ai(delta)
 	_update_prompt()
 	if Input.is_action_just_pressed("attack"):
-		_attack_enemy(BASIC_DAMAGE + GameState.get_weapon_damage_bonus(), "Basic Attack")
+		_hud_result("ATK pressed")
+		var bonus = GameState.get_weapon_damage_bonus() if GameState != null else 0
+		_attack_enemy(BASIC_DAMAGE + bonus, "Basic Attack")
 	if Input.is_action_just_pressed("heavy_attack"):
+		_hud_result("HVY pressed")
 		_heavy_attack()
 	if Input.is_action_just_pressed("guard"):
+		_hud_result("GRD pressed")
 		_guard()
 	if Input.is_action_just_pressed("class_ability"):
+		_hud_result("CLS pressed")
 		_class_ability()
 	if Input.is_action_just_pressed("interact"):
 		_interact()
