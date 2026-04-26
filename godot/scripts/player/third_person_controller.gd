@@ -20,17 +20,23 @@ class_name ThirdPersonController
 var current_health: int = max_health
 var is_dead: bool = false
 var attack_timer: float = 0.0
+var camera_pitch: float = 0.0
 
 
 func _ready() -> void:
 	spawn_point = global_position
 	current_health = max_health
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	camera_pitch = spring_arm.rotation.x
+	# Web: don't force mouse capture in _ready, capture on first click
+	Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
 
 
 func _input(event: InputEvent) -> void:
 	if is_dead:
 		return
+	# Capture mouse on click (web-friendly)
+	if event is InputEventMouseButton and event.pressed:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if event is InputEventMouseMotion:
 		_handle_mouse(event)
 
@@ -71,14 +77,13 @@ func _movement_input() -> Vector3:
 
 
 func _handle_mouse(event: InputEventMouseMotion) -> void:
-	# Horizontal rotation: rotate the player body (Y axis)
 	rotate_y(-event.relative.x * mouse_sensitivity)
-	# Vertical rotation: rotate the spring arm (X axis), clamped
-	spring_arm.rotation.x = clamp(
-		spring_arm.rotation.x - event.relative.y * mouse_sensitivity,
+	camera_pitch = clamp(
+		camera_pitch - event.relative.y * mouse_sensitivity,
 		deg_to_rad(-80.0),
 		deg_to_rad(60.0)
 	)
+	spring_arm.rotation.x = camera_pitch
 
 
 func _camera_forward() -> Vector3:
