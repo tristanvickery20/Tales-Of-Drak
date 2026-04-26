@@ -132,8 +132,9 @@ def main() -> int:
         project_text = project_godot.read_text()
         required_actions = [
             "move_forward", "move_back", "move_left", "move_right",
-            "jump", "sprint", "interact", "craft", "place_build",
+            "jump", "sprint", "interact", "craft", "build_mode",
             "attack", "heavy_attack", "guard", "class_ability",
+            "inventory", "pause", "save_game", "load_game",
         ]
         for action in required_actions:
             if f"\n{action}=" not in project_text:
