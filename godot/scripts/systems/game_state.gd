@@ -26,6 +26,36 @@ var equipment = {
 var action_log = PackedStringArray()
 var last_action_result = {"ok": true, "message": "GameState initialized."}
 
+# Resource tracking for the prototype
+var resources = {
+	"wood": 0,
+	"stone": 0,
+	"fiber": 0,
+	"drak_essence": 0,
+}
+
+# Build cost definitions
+const BUILD_COSTS = {
+	"campfire": {"wood": 3, "stone": 2},
+	"wooden_wall": {"wood": 5},
+	"wooden_foundation": {"wood": 8, "stone": 2},
+	"drak_totem": {"stone": 5, "drak_essence": 3},
+}
+
+# Objective tracking
+var current_objective_index: int = 0
+var objectives_completed: Array = []
+const OBJECTIVES = [
+	"Gather 5 Wood",
+	"Gather 3 Stone",
+	"Build a Campfire",
+	"Defeat a Drakling",
+	"Build a Drak Totem",
+]
+
+var placed_buildings: Array = []
+var depleted_nodes: Array = []
+
 var item_defs = {
 	"starter_hatchet": {"name":"Starter Hatchet","icon":"H","type":"tool / weapon","slot":"main_hand","description":"A rough hatchet. Useful for gathering and basic fighting.","damage_dice":"1d4","damage_bonus":1,"usable":false,"equippable":true},
 	"weathered_timber": {"name":"Weathered Timber","icon":"W","type":"resource","slot":"","description":"Old timber gathered from the world. Used for primitive crafting.","damage_bonus":0,"usable":false,"equippable":false},
@@ -36,6 +66,10 @@ var item_defs = {
 	"rusty_sword": {"name":"Rusty Sword","icon":"S","type":"weapon","slot":"main_hand","description":"A battered sword from a dungeon chest. Better than a hatchet in combat.","damage_dice":"1d8","damage_bonus":4,"usable":false,"equippable":true},
 	"plain_clothes": {"name":"Plain Clothes","icon":"A","type":"armor","slot":"armor","description":"Basic starter clothing. No real protection yet.","armor_bonus":0,"usable":false,"equippable":true},
 	"ancient_coin": {"name":"Ancient Coin","icon":"O","type":"currency","slot":"","description":"A small coin from the dungeon. Used later for vendors and markets.","damage_bonus":0,"usable":false,"equippable":false},
+	"wood": {"name":"Wood","icon":"W","type":"resource","slot":"","description":"Basic wood gathered from trees.","usable":false,"equippable":false},
+	"stone": {"name":"Stone","icon":"S","type":"resource","slot":"","description":"Rough stone gathered from rocks.","usable":false,"equippable":false},
+	"fiber": {"name":"Fiber","icon":"F","type":"resource","slot":"","description":"Plant fiber used for basic crafting.","usable":false,"equippable":false},
+	"drak_essence": {"name":"Drak Essence","icon":"D","type":"resource","slot":"","description":"Mystical essence from Drak crystals.","usable":false,"equippable":false},
 }
 
 func _ready():
@@ -318,6 +352,9 @@ func get_debug_lines():
 	lines.append("Scene: %s" % scene_path)
 	lines.append("HP: %d / %d" % [current_hp, max_hp])
 	lines.append("XP: %d / %d  LV: %d" % [xp, xp_to_next, level])
+	lines.append("--- Resources ---")
+	for r in resources.keys():
+		lines.append("  %s: %d" % [r, resources[r]])
 	lines.append("--- Inventory ---")
 	for line in get_inventory_lines():
 		lines.append("  %s" % line)
@@ -331,3 +368,109 @@ func get_debug_lines():
 	for i in range(start, action_log.size()):
 		lines.append("  %d: %s" % [i, action_log[i]])
 	return lines
+
+
+# ---- Resource helpers ----
+
+func add_resource(resource_id: String, amount: int = 1) -> void:
+	resource_id = resource_id.to_lower()
+	if resources.has(resource_id):
+		resources[resource_id] += amount
+	else:
+		resources[resource_id] = amount
+	runtime_state_changed.emit()
+
+func get_resource(resource_id: String) -> int:
+	resource_id = resource_id.to_lower()
+	return resources.get(resource_id, 0)
+
+func has_resources(costs: Dictionary) -> bool:
+	for rid in costs.keys():
+		if get_resource(str(rid)) < int(costs[rid]):
+			return false
+	return true
+
+func spend_resources(costs: Dictionary) -> bool:
+	if not has_resources(costs):
+		return false
+	for rid in costs.keys():
+		resources[str(rid).to_lower()] -= int(costs[rid])
+	runtime_state_changed.emit()
+	return true
+
+func get_resource_lines() -> PackedStringArray:
+	var lines = PackedStringArray()
+	lines.append("Wood: %d" % resources.get("wood", 0))
+	lines.append("Stone: %d" % resources.get("stone", 0))
+	lines.append("Fiber: %d" % resources.get("fiber", 0))
+	lines.append("Drak Essence: %d" % resources.get("drak_essence", 0))
+	return lines
+
+
+# ---- Objective helpers ----
+
+func get_current_objective() -> String:
+	if current_objective_index < OBJECTIVES.size():
+		return OBJECTIVES[current_objective_index]
+	return "All objectives complete!"
+
+func check_objective_complete() -> bool:
+	var idx = current_objective_index
+	if idx == 0:  # Gather 5 Wood
+		return get_resource("wood") >= 5
+	if idx == 1:  # Gather 3 Stone
+		return get_resource("stone") >= 3
+	if idx == 2:  # Build a Campfire
+		return "campfire" in objectives_completed
+	if idx == 3:  # Defeat a Drakling
+		return "drakling_defeated" in objectives_completed
+	if idx == 4:  # Build a Drak Totem
+		return "drak_totem" in objectives_completed
+	return false
+
+func advance_objective() -> String:
+	if current_objective_index >= OBJECTIVES.size():
+		return "All objectives complete!"
+	var completed = OBJECTIVES[current_objective_index]
+	current_objective_index += 1
+	runtime_state_changed.emit()
+	return completed
+
+func mark_objective_complete(key: String) -> void:
+	if key not in objectives_completed:
+		objectives_completed.append(key)
+
+
+# ---- Save / Load ----
+
+func save_game() -> Dictionary:
+	var data = {
+		"character_name": character_name,
+		"class_id": class_id,
+		"class_name": class_name,
+		"resources": resources.duplicate(),
+		"current_hp": current_hp,
+		"max_hp": max_hp,
+		"current_objective_index": current_objective_index,
+		"objectives_completed": objectives_completed.duplicate(),
+		"placed_buildings": placed_buildings.duplicate(),
+		"depleted_nodes": depleted_nodes.duplicate(),
+		"inventory": inventory.duplicate(),
+	}
+	return data
+
+func load_game(data: Dictionary) -> void:
+	character_name = data.get("character_name", "Adventurer")
+	class_id = data.get("class_id", "fighter")
+	class_name = data.get("class_name", "Fighter")
+	resources = data.get("resources", {"wood": 0, "stone": 0, "fiber": 0, "drak_essence": 0}).duplicate()
+	current_hp = int(data.get("current_hp", max_hp))
+	max_hp = int(data.get("max_hp", 20))
+	current_objective_index = int(data.get("current_objective_index", 0))
+	objectives_completed = data.get("objectives_completed", [])
+	placed_buildings = data.get("placed_buildings", [])
+	depleted_nodes = data.get("depleted_nodes", [])
+	var saved_inv = data.get("inventory", {})
+	if not saved_inv.is_empty():
+		inventory = saved_inv.duplicate()
+	runtime_state_changed.emit()

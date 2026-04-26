@@ -37,7 +37,7 @@ const UTILITY_ACTIONS: Array = [
 	["JUMP", &"jump"],
 	["RUN", &"sprint"],
 	["CRAFT", &"craft"],
-	["PLACE", &"place_build"],
+	["PLACE", &"build_mode"],
 ]
 
 var _joystick_base: Panel

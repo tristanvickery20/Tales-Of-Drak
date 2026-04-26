@@ -43,6 +43,11 @@ var backpack_lines = PackedStringArray()
 var character_lines = PackedStringArray()
 var inventory_counts = {}
 
+# New resource/objective display
+var resource_label
+var objective_label
+var build_mode_label
+
 var item_defs = {
 	"starter_hatchet":{"name":"Starter Hatchet","icon":"H","type":"tool / weapon","slot":"main_hand","description":"A rough starter hatchet. Useful for gathering and basic fighting.","damage_dice":"1d4","damage_bonus":1,"usable":false,"equippable":true},
 	"weathered_timber":{"name":"Weathered Timber","icon":"W","type":"resource","slot":"","description":"Old timber gathered from the world. Used for primitive crafting.","usable":false,"equippable":false},
@@ -69,6 +74,7 @@ func _ready():
 	root_margin.offset_top = 88
 	root_margin.offset_right = -105
 	_build_bars()
+	_build_resource_display()
 	_build_button()
 	_build_dbg_button()
 	_build_inventory_panel()
@@ -104,6 +110,66 @@ func _panel_style(bg, border, radius = 8):
 	s.corner_radius_bottom_left = radius
 	s.corner_radius_bottom_right = radius
 	return s
+
+func _build_resource_display():
+	# Resource label
+	resource_label = Label.new()
+	resource_label.add_theme_font_size_override("font_size", 13)
+	resource_label.offset_left = 12
+	resource_label.offset_top = 72
+	resource_label.offset_right = 300
+	resource_label.offset_bottom = 130
+	resource_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	add_child(resource_label)
+
+	# Objective label
+	objective_label = Label.new()
+	objective_label.add_theme_font_size_override("font_size", 14)
+	objective_label.add_theme_color_override("font_color", Color(1, 0.85, 0.35, 1))
+	objective_label.offset_left = 12
+	objective_label.offset_top = 132
+	objective_label.offset_right = 400
+	objective_label.offset_bottom = 160
+	add_child(objective_label)
+
+	# Build mode label
+	build_mode_label = Label.new()
+	build_mode_label.add_theme_font_size_override("font_size", 14)
+	build_mode_label.add_theme_color_override("font_color", Color(0.35, 1, 0.5, 1))
+	build_mode_label.offset_left = 12
+	build_mode_label.offset_top = 160
+	build_mode_label.offset_right = 400
+	build_mode_label.offset_bottom = 190
+	add_child(build_mode_label)
+
+func set_resources(res: Dictionary) -> void:
+	if resource_label == null:
+		return
+	resource_label.text = "Wood: %d  Stone: %d  Fiber: %d  Drak Essence: %d" % [
+		int(res.get("wood", 0)),
+		int(res.get("stone", 0)),
+		int(res.get("fiber", 0)),
+		int(res.get("drak_essence", 0)),
+	]
+
+func set_objective(text: String) -> void:
+	if objective_label == null:
+		return
+	objective_label.text = "Objective: %s" % text
+
+func set_build_mode(active: bool, piece_name: String) -> void:
+	if build_mode_label == null:
+		return
+	if active:
+		build_mode_label.text = "BUILD MODE: %s  [1-4] Switch  [LClick] Place  [B] Exit" % piece_name
+	else:
+		build_mode_label.text = ""
+
+func toggle_inventory() -> void:
+	_refresh_from_gamestate()
+	panel.visible = not panel.visible
+	overlay.visible = panel.visible
+	_update_view()
 
 func _build_bars():
 	var hp_frame = PanelContainer.new()

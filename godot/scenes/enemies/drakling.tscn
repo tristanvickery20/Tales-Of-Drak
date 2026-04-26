@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_drakling.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_enemy_body"]
+albedo_color = Color(0.9, 0.1, 0.12, 1)
+emission_enabled = true
+emission = Color(0.4, 0.0, 0.0, 1)
+emission_energy_multiplier = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy_body"]
+size = Vector3(0.7, 0.8, 0.45)
+
+[sub_resource type="BoxMesh" id="BoxMesh_enemy_head"]
+size = Vector3(0.38, 0.38, 0.38)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_enemy"]
+radius = 0.35
+height = 1.0
+
+[node name="Drakling" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_script")
+patrol_points = PackedVector3Array(Vector3(-6, 0, -6), Vector3(-8, 0, -3), Vector3(-5, 0, -1), Vector3(-2, 0, -4))
+
+[node name="EnemyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_enemy_body")
+material_override = SubResource("Mat_enemy_body")
+
+[node name="EnemyHead" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("BoxMesh_enemy_head")
+material_override = SubResource("Mat_enemy_body")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape_enemy")

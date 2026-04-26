@@ -1,9 +1,11 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/test_world_controller.gd" id="1_ctrl"]
 [ext_resource type="Script" path="res://scripts/player/third_person_controller.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
 [ext_resource type="Script" path="res://scripts/ui/mobile_controls.gd" id="4_mobile"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="5_pause"]
+[ext_resource type="Script" path="res://scripts/enemies/enemy_drakling.gd" id="6_enemy"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.055, 0.075, 0.055, 1)
@@ -100,6 +102,56 @@ size = Vector3(0.22, 0.78, 0.24)
 
 [sub_resource type="BoxMesh" id="BoxMesh_path"]
 size = Vector3(3.0, 0.035, 11.5)
+
+[sub_resource type="StandardMaterial3D" id="Mat_wood"]
+albedo_color = Color(0.15, 0.52, 0.18, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_stone"]
+albedo_color = Color(0.4, 0.4, 0.42, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_fiber"]
+albedo_color = Color(0.25, 0.7, 0.25, 1)
+emission_enabled = true
+emission = Color(0.02, 0.15, 0.02, 1)
+emission_energy_multiplier = 0.2
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Mat_crystal"]
+albedo_color = Color(0.5, 0.1, 0.8, 1)
+emission_enabled = true
+emission = Color(0.3, 0.05, 0.7, 1)
+emission_energy_multiplier = 0.8
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
+albedo_color = Color(0.25, 0.22, 0.18, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="BoxMesh_tree"]
+size = Vector3(0.6, 2.5, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rock"]
+size = Vector3(1.2, 0.8, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_plant"]
+size = Vector3(0.5, 0.7, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_crystal"]
+size = Vector3(0.5, 1.5, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ns"]
+size = Vector3(0.3, 3.0, 34.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ew"]
+size = Vector3(34.0, 3.0, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_ns"]
+size = Vector3(0.3, 3.0, 34.0)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall_ew"]
+size = Vector3(34.0, 3.0, 0.3)
 
 [node name="TestWorld" type="Node3D"]
 script = ExtResource("1_ctrl")
@@ -270,3 +322,184 @@ text = "Last:"
 
 [node name="MobileControls" type="CanvasLayer" parent="."]
 script = ExtResource("4_mobile")
+
+; ---- Resource Areas ----
+
+; Wood area (green tree boxes)
+[node name="WoodTree1" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 1.25, -10)
+
+[node name="WoodTree1_mesh" type="MeshInstance3D" parent="WoodTree1"]
+mesh = SubResource("BoxMesh_tree")
+material_override = SubResource("Mat_wood")
+
+[node name="WoodTree2" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.25, -7)
+
+[node name="WoodTree2_mesh" type="MeshInstance3D" parent="WoodTree2"]
+mesh = SubResource("BoxMesh_tree")
+material_override = SubResource("Mat_wood")
+
+[node name="WoodTree3" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 1.25, -12)
+
+[node name="WoodTree3_mesh" type="MeshInstance3D" parent="WoodTree3"]
+mesh = SubResource("BoxMesh_tree")
+material_override = SubResource("Mat_wood")
+
+; Stone area (gray rock boxes)
+[node name="StoneRock1" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.4, -10)
+
+[node name="StoneRock1_mesh" type="MeshInstance3D" parent="StoneRock1"]
+mesh = SubResource("BoxMesh_rock")
+material_override = SubResource("Mat_stone")
+
+[node name="StoneRock2" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.4, -6)
+
+[node name="StoneRock2_mesh" type="MeshInstance3D" parent="StoneRock2"]
+mesh = SubResource("BoxMesh_rock")
+material_override = SubResource("Mat_stone")
+
+; Fiber area (light green plant boxes)
+[node name="FiberPlant1" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.35, 10)
+
+[node name="FiberPlant1_mesh" type="MeshInstance3D" parent="FiberPlant1"]
+mesh = SubResource("BoxMesh_plant")
+material_override = SubResource("Mat_fiber")
+
+[node name="FiberPlant2" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.35, 12)
+
+[node name="FiberPlant2_mesh" type="MeshInstance3D" parent="FiberPlant2"]
+mesh = SubResource("BoxMesh_plant")
+material_override = SubResource("Mat_fiber")
+
+; Drak Crystal area (purple glowing crystal boxes)
+[node name="Crystal1" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.75, 10)
+
+[node name="Crystal1_mesh" type="MeshInstance3D" parent="Crystal1"]
+mesh = SubResource("BoxMesh_crystal")
+material_override = SubResource("Mat_crystal")
+
+[node name="Crystal2" type="Node3D" parent="." groups=["gather_node"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.75, 7)
+
+[node name="Crystal2_mesh" type="MeshInstance3D" parent="Crystal2"]
+mesh = SubResource("BoxMesh_crystal")
+material_override = SubResource("Mat_crystal")
+
+; ---- Enemy Area ----
+[node name="EnemyDrakling" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.9, -6)
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("6_enemy")
+patrol_points = PackedVector3Array(Vector3(-6, 0, -6), Vector3(-8, 0, -3), Vector3(-4, 0, -1), Vector3(-2, 0, -5))
+
+[node name="EnemyMesh" type="MeshInstance3D" parent="EnemyDrakling"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_rock")
+material_override = SubResource("Mat_wood")
+
+[node name="EnemyHead" type="MeshInstance3D" parent="EnemyDrakling"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("BoxMesh_plant")
+material_override = SubResource("Mat_wood")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EnemyDrakling"]
+shape = SubResource("CapsuleShape_player")
+
+; ---- World Boundaries (walls) ----
+[node name="WorldBoundaries" type="Node3D" parent="."]
+
+[node name="WallNorth" type="StaticBody3D" parent="WorldBoundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -17)
+
+[node name="WallNorthMesh" type="MeshInstance3D" parent="WorldBoundaries/WallNorth"]
+mesh = SubResource("BoxMesh_wall_ew")
+material_override = SubResource("Mat_wall")
+
+[node name="WallNorthCollision" type="CollisionShape3D" parent="WorldBoundaries/WallNorth"]
+shape = SubResource("BoxShape_wall_ew")
+
+[node name="WallSouth" type="StaticBody3D" parent="WorldBoundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 17)
+
+[node name="WallSouthMesh" type="MeshInstance3D" parent="WorldBoundaries/WallSouth"]
+mesh = SubResource("BoxMesh_wall_ew")
+material_override = SubResource("Mat_wall")
+
+[node name="WallSouthCollision" type="CollisionShape3D" parent="WorldBoundaries/WallSouth"]
+shape = SubResource("BoxShape_wall_ew")
+
+[node name="WallEast" type="StaticBody3D" parent="WorldBoundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1.5, 0)
+
+[node name="WallEastMesh" type="MeshInstance3D" parent="WorldBoundaries/WallEast"]
+mesh = SubResource("BoxMesh_wall_ns")
+material_override = SubResource("Mat_wall")
+
+[node name="WallEastCollision" type="CollisionShape3D" parent="WorldBoundaries/WallEast"]
+shape = SubResource("BoxShape_wall_ns")
+
+[node name="WallWest" type="StaticBody3D" parent="WorldBoundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 1.5, 0)
+
+[node name="WallWestMesh" type="MeshInstance3D" parent="WorldBoundaries/WallWest"]
+mesh = SubResource("BoxMesh_wall_ns")
+material_override = SubResource("Mat_wall")
+
+[node name="WallWestCollision" type="CollisionShape3D" parent="WorldBoundaries/WallWest"]
+shape = SubResource("BoxShape_wall_ns")
+
+; ---- Pause Menu ----
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("5_pause")
+
+[node name="Panel" type="PanelContainer" parent="PauseMenu"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 300.0
+offset_top = 120.0
+offset_right = -300.0
+offset_bottom = -120.0
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu/Panel"]
+layout_mode = 2
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+text = "PAUSED"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 32
+
+[node name="Spacer1" type="Control" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 20)
+
+[node name="ResumeButton" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Resume"
+custom_minimum_size = Vector2(200, 42)
+
+[node name="SaveButton" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Save (F5)"
+custom_minimum_size = Vector2(200, 42)
+
+[node name="LoadButton" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Load (F9)"
+custom_minimum_size = Vector2(200, 42)
+
+[node name="QuitButton" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+text = "Quit to Desktop"
+custom_minimum_size = Vector2(200, 42)
