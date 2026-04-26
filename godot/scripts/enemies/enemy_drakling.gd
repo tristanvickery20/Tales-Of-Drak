@@ -11,7 +11,7 @@ class_name EnemyDrakling
 @export var max_health: int = 15
 @export var damage: int = 5
 @export var attack_cooldown: float = 1.5
-@export var patrol_points: Array[Vector3] = []
+@export var patrol_points: PackedVector3Array = PackedVector3Array()
 
 var current_health: int = max_health
 var is_dead: bool = false
